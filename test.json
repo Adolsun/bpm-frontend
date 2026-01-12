@@ -1,0 +1,21 @@
+{
+    "total_episodes": 10,
+    "order_index": 0,
+    "up_name": "小飞有点东西",
+    "updated_at": "2026-01-04T20:21:20",
+    "title": "13-爬虫",
+    "season_id": 6902742,
+    "created_at": "2026-01-04T20:21:20",
+    "last_sync_at": "2026-01-04T20:21:20",
+    "video": [
+        {
+            "bvid": "BV1zH2WBEEzn",
+            "title": "001-开篇词",
+            "duration": 94,
+            "collection_id": 6902742,
+            "order_index": 0,
+            "watched_count": 0,
+            "status": "not_watched"
+        }
+    ]
+}
