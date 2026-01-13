@@ -80,7 +80,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from "vue";
+import { ref } from "vue";
 import { formatSecondsToHMS, formatDate } from "@/utils/timeUtils";
 import type { Episode, SeasonInfo } from "@/types";
 

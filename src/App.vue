@@ -62,7 +62,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, reactive } from "vue";
+import { onMounted, onUnmounted, ref } from "vue";
 import { ElMessage } from "element-plus";
 import { changeWatchedCount } from "@/utils/dataOption";
 import VideoCollection from "@/components/VideoCollection.vue";

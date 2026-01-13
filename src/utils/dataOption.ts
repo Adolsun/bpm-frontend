@@ -1,11 +1,10 @@
 import { extractBVFromUrl } from "./bvParser";
 import { API } from "@/api";
-import { type Episode, type SeasonInfo } from "@/types";
+import { type SeasonInfo } from "@/types";
 import { ElMessageBox, ElMessage } from "element-plus";
 import { useSelectedEpisodesStore } from "@/stores/selectedEpisodes";
 import { useSeasonInfosStore } from "@/stores/seasonInfos";
 import { useContextMenuStore } from "@/stores/contextMenu";
-import { ca } from "element-plus/es/locales.mjs";
 
 export async function fetchSeasonInfo(url: string): Promise<SeasonInfo> {
     // 提取BV号
