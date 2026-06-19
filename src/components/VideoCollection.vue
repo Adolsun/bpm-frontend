@@ -1,5 +1,10 @@
 <template>
-    <el-card class="collection-card" :class="{ expanded: isExpanded }">
+    <el-card
+        class="collection-card"
+        :class="{
+            expanded: isExpanded,
+        }"
+    >
         <!-- 标题栏 -->
         <div class="collection-header">
             <div class="header-left">

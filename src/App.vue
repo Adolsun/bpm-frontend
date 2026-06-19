@@ -23,6 +23,44 @@
         </div>
 
         <div class="collections-container">
+            <!-- 批量操作工具栏 -->
+            <div v-show="seasonInfosNum > 0" class="batch-toolbar">
+                <el-button
+                    class="batch-toggle-btn"
+                    :type="isBatchMode ? 'primary' : 'default'"
+                    @click="toggleBatchMode"
+                >
+                    {{ isBatchMode ? "退出批量" : "批量操作" }}
+                </el-button>
+                <el-button
+                    plain
+                    class="select-all-btn"
+                    @click="handleToggleSelectAll"
+                    :disabled="!isBatchMode"
+                >
+                    {{ allSelected ? "取消全选" : "全选" }}
+                </el-button>
+                <el-button
+                    plain
+                    type="primary"
+                    @click="batchRefresh"
+                    :loading="batchUpdating"
+                    :disabled="selectedCount === 0"
+                >
+                    批量刷新
+                </el-button>
+                <el-button
+                    plain
+                    type="danger"
+                    @click="batchDelete"
+                    :loading="batchDeleting"
+                    :disabled="selectedCount === 0"
+                >
+                    批量删除
+                </el-button>
+                <span class="batch-info">已选 {{ selectedCount }} 个合集</span>
+            </div>
+
             <!-- 视频合集列表 -->
             <draggable
                 v-model="seasonInfosStore.seasonInfos"
@@ -31,7 +69,20 @@
                 @change="handleDragChange"
             >
                 <template #item="{ element }">
-                    <div class="collection-wrapper">
+                    <div
+                        class="collection-wrapper"
+                        :class="{
+                            'batch-mode': isBatchMode,
+                            'collection-selected': selectedCollectionsStore.isSelected(element.season_id),
+                        }"
+                        @click="handleCollectionRowClick(element.season_id)"
+                    >
+                        <div class="batch-checkbox-area" @click.stop>
+                            <el-checkbox
+                                :model-value="selectedCollectionsStore.isSelected(element.season_id)"
+                                @change="selectedCollectionsStore.toggleSelect(element.season_id)"
+                            />
+                        </div>
                         <VideoCollection :metadata="element" />
                     </div>
                 </template>
@@ -67,20 +118,45 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from "vue";
+import { onMounted, onUnmounted, ref, computed } from "vue";
 import { ElMessage } from "element-plus";
 import draggable from "vuedraggable";
-import { changeWatchedCount, updateCollectionOrder } from "@/utils/dataOption";
+import { changeWatchedCount, updateCollectionOrder, batchDeleteCollections, batchUpdateCollections } from "@/utils/dataOption";
 import VideoCollection from "@/components/VideoCollection.vue";
 import { useContextMenuStore } from "@/stores/contextMenu";
 import { useSelectedEpisodesStore } from "@/stores/selectedEpisodes";
+import { useSelectedCollectionsStore } from "@/stores/selectedCollections";
 import { useSeasonInfosStore } from "@/stores/seasonInfos";
 
 // 右键菜单
 const contextMenuStore = useContextMenuStore();
 
 const selectedEpisodesStore = useSelectedEpisodesStore();
+const selectedCollectionsStore = useSelectedCollectionsStore();
 const seasonInfosStore = useSeasonInfosStore();
+
+const seasonInfosNum = computed(() => seasonInfosStore.seasonInfosNum);
+const selectedCount = computed(() => selectedCollectionsStore.selectedCount);
+const isBatchMode = computed(() => selectedCollectionsStore.isBatchMode);
+const allSelected = computed(() => {
+    const ids = seasonInfosStore.seasonInfos.map((s) => s.season_id);
+    return selectedCollectionsStore.isAllSelected(ids);
+});
+
+const toggleBatchMode = () => {
+    selectedCollectionsStore.toggleBatchMode();
+};
+
+const handleToggleSelectAll = () => {
+    const ids = seasonInfosStore.seasonInfos.map((s) => s.season_id);
+    selectedCollectionsStore.toggleSelectAll(ids);
+};
+
+const handleCollectionRowClick = (seasonId: number) => {
+    if (isBatchMode.value) {
+        selectedCollectionsStore.toggleSelect(seasonId);
+    }
+};
 
 const handleDragChange = async (evt: { moved?: { oldIndex: number; newIndex: number } }) => {
     if (!evt.moved) return;
@@ -141,6 +217,39 @@ const createProgress = async () => {
     }
 };
 
+// 批量操作loading状态
+const batchUpdating = ref(false);
+const batchDeleting = ref(false);
+
+const batchRefresh = async () => {
+    const ids = Array.from(selectedCollectionsStore.selectedIds);
+    batchUpdating.value = true;
+    try {
+        const result = await batchUpdateCollections(ids);
+        ElMessage.success(
+            `批量刷新完成：成功 ${result.succeeded.length} 个，失败 ${result.failed.length} 个`
+        );
+    } catch (error) {
+        ElMessage.error(`批量刷新失败: ${(error as Error).message}`);
+    } finally {
+        batchUpdating.value = false;
+        selectedCollectionsStore.clearSelection();
+    }
+};
+
+const batchDelete = async () => {
+    const ids = Array.from(selectedCollectionsStore.selectedIds);
+    batchDeleting.value = true;
+    try {
+        await batchDeleteCollections(ids);
+    } catch (error) {
+        ElMessage.error(`批量删除失败: ${(error as Error).message}`);
+    } finally {
+        batchDeleting.value = false;
+        selectedCollectionsStore.clearSelection();
+    }
+};
+
 // 处理页面点击事件（用于取消选中）
 const handlePageClick = (event: MouseEvent) => {
     // 检查右键菜单是否显示
@@ -160,9 +269,25 @@ const handlePageClick = (event: MouseEvent) => {
         ".episode-item"
     );
 
-    // 如果点击的不是视频项目，则清除选中状态
+    // 如果点击的不是视频项目，则清除视频选中状态
     if (!isClickOnEpisodeItem) {
         selectedEpisodesStore.clearSelectedEpisodes();
+    }
+
+    // 如果点击的不是合集卡片及其子元素，则清除合集选中状态
+    const isClickOnCollectionCard = (event.target as Element).closest(
+        ".collection-card"
+    );
+    const isClickOnBatchToolbar = (event.target as Element).closest(
+        ".batch-toolbar"
+    );
+    const isClickOnCollectionWrapper = (event.target as Element).closest(
+        ".collection-wrapper"
+    );
+    if (!isClickOnCollectionCard && !isClickOnBatchToolbar && !isClickOnCollectionWrapper) {
+        if (!selectedCollectionsStore.isBatchMode) {
+            selectedCollectionsStore.clearSelection();
+        }
     }
 };
 
@@ -241,21 +366,86 @@ $expanded-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 
 .collections-container {
     width: 100%;
-    min-height: 0; /* 允许容器在flex布局中收缩 */
+    min-height: 0;
     flex: 1;
     display: flex;
     flex-direction: column;
 }
 
+.batch-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    margin-bottom: 12px;
+    background-color: #f0f7ff;
+    border: 1px solid #d6e8fa;
+    border-radius: 8px;
+    animation: slideIn 0.2s ease;
+
+    .batch-info {
+        color: $text-secondary;
+        font-size: 14px;
+        font-weight: 500;
+        margin-left: auto;
+    }
+
+    .batch-toggle-btn {
+        min-width: 96px;
+        flex-shrink: 0;
+    }
+
+    .select-all-btn {
+        min-width: 90px;
+        flex-shrink: 0;
+    }
+}
+
 .collection-wrapper {
     margin-bottom: 20px;
     transition: transform 0.2s ease;
+    position: relative;
+
+    &.batch-mode {
+        cursor: pointer;
+    }
+
+    .batch-checkbox-area {
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        transform: translateX(-100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 8px 0 16px;
+        visibility: hidden;
+
+        :deep(.el-checkbox__inner) {
+            width: 22px;
+            height: 22px;
+            &::after {
+                width: 6px;
+                height: 10px;
+            }
+        }
+    }
+
+    &.batch-mode .batch-checkbox-area {
+        visibility: visible;
+    }
 }
 
 .collection-wrapper.ghost {
     opacity: 0.5;
     background: #f0f0f0;
     border: 2px dashed #999;
+}
+
+.collection-wrapper.collection-selected :deep(.collection-card) {
+    border-color: #ee7959;
+    box-shadow: 0 0 10px 3px rgba(238, 121, 89, 0.4);
 }
 
 .collection-meta {
