@@ -25,6 +25,9 @@ export const useSeasonInfosStore = defineStore("seasonInfos", () => {
             (item) => item.season_id !== season_id
         );
     };
+    const reorderSeasonInfos = (newOrder: SeasonInfo[]) => {
+        seasonInfos.value = newOrder;
+    };
     return {
         seasonInfos,
         seasonInfosNum,
@@ -32,5 +35,6 @@ export const useSeasonInfosStore = defineStore("seasonInfos", () => {
         addOneSeasonInfo,
         updateSeasonInfo,
         deleteSeasonInfo,
+        reorderSeasonInfos,
     };
 });

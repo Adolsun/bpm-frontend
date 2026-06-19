@@ -2,9 +2,12 @@
     <el-card class="collection-card" :class="{ expanded: isExpanded }">
         <!-- 标题栏 -->
         <div class="collection-header">
-            <h3 class="collection-title">
-                {{ metadata.title }} ({{ metadata.total_episodes }}集)
-            </h3>
+            <div class="header-left">
+                <el-icon class="drag-handle"><Rank /></el-icon>
+                <h3 class="collection-title">
+                    {{ metadata.title }} ({{ metadata.total_episodes }}集)
+                </h3>
+            </div>
             <div class="header-buttons">
                 <el-button
                     class="delete-btn"
@@ -84,7 +87,7 @@ import { ref } from "vue";
 import { formatSecondsToHMS, formatDate } from "@/utils/timeUtils";
 import type { Episode, SeasonInfo } from "@/types";
 
-import { ArrowDown, ArrowUp, Refresh, Delete } from "@element-plus/icons-vue";
+import { ArrowDown, ArrowUp, Refresh, Delete, Rank } from "@element-plus/icons-vue";
 import { useSelectedEpisodesStore } from "@/stores/selectedEpisodes";
 import { useContextMenuStore } from "@/stores/contextMenu";
 import { refreshCollection, deleteCollection } from "@/utils/dataOption";
@@ -265,6 +268,25 @@ $expanded-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         padding: 12px 16px;
         background-color: $bg-light;
         flex-wrap: nowrap;
+    }
+
+    .header-left {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .drag-handle {
+        cursor: move;
+        color: $text-secondary;
+        font-size: 18px;
+        flex-shrink: 0;
+
+        &:hover {
+            color: $primary-color;
+        }
     }
 
     .collection-title {

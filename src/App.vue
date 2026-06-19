@@ -24,13 +24,18 @@
 
         <div class="collections-container">
             <!-- 视频合集列表 -->
-            <div
-                v-for="collection in seasonInfosStore.seasonInfos"
-                :key="collection.season_id"
-                class="collection-wrapper"
+            <draggable
+                v-model="seasonInfosStore.seasonInfos"
+                item-key="season_id"
+                ghost-class="ghost"
+                @change="handleDragChange"
             >
-                <VideoCollection :metadata="collection" />
-            </div>
+                <template #item="{ element }">
+                    <div class="collection-wrapper">
+                        <VideoCollection :metadata="element" />
+                    </div>
+                </template>
+            </draggable>
 
             <!-- 当没有合集时的提示 -->
             <div
@@ -64,7 +69,8 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from "vue";
 import { ElMessage } from "element-plus";
-import { changeWatchedCount } from "@/utils/dataOption";
+import draggable from "vuedraggable";
+import { changeWatchedCount, updateCollectionOrder } from "@/utils/dataOption";
 import VideoCollection from "@/components/VideoCollection.vue";
 import { useContextMenuStore } from "@/stores/contextMenu";
 import { useSelectedEpisodesStore } from "@/stores/selectedEpisodes";
@@ -75,6 +81,29 @@ const contextMenuStore = useContextMenuStore();
 
 const selectedEpisodesStore = useSelectedEpisodesStore();
 const seasonInfosStore = useSeasonInfosStore();
+
+const handleDragChange = async (evt: { moved?: { oldIndex: number; newIndex: number } }) => {
+    if (!evt.moved) return;
+
+    const { oldIndex, newIndex } = evt.moved;
+    const infos = seasonInfosStore.seasonInfos;
+    
+    const minIndex = Math.min(oldIndex, newIndex);
+    const maxIndex = Math.max(oldIndex, newIndex);
+    
+    const updates = infos.slice(minIndex, maxIndex + 1).map((item, idx) => ({
+        season_id: item.season_id,
+        order_index: minIndex + idx,
+    }));
+
+    try {
+        const message = await updateCollectionOrder(updates);
+        ElMessage.success(message);
+    } catch (error) {
+        ElMessage.error(`同步排序失败: ${(error as Error).message}`);
+        await seasonInfosStore.getAllSessonInfos();
+    }
+};
 
 onMounted(async () => {
     try {
@@ -220,6 +249,13 @@ $expanded-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 
 .collection-wrapper {
     margin-bottom: 20px;
+    transition: transform 0.2s ease;
+}
+
+.collection-wrapper.ghost {
+    opacity: 0.5;
+    background: #f0f0f0;
+    border: 2px dashed #999;
 }
 
 .collection-meta {
