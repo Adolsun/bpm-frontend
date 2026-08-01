@@ -271,15 +271,16 @@ const handleAuxClick = (episode: Episode, event: MouseEvent) => {
 </script>
 
 <style scoped lang="scss">
-$bg-panel: #11151f;
-$line: rgba(226, 232, 248, 0.1);
-$line-strong: rgba(226, 232, 248, 0.18);
-$text-hi: #eef2f9;
-$text-mid: #b6c0d4;
-$text-low: #7d8799;
+$bg-panel: #ffffff;
+$line: rgba(15, 23, 42, 0.1);
+$line-strong: rgba(15, 23, 42, 0.16);
+$text-hi: #161b26;
+$text-mid: #3f4a5c;
+$text-low: #5f6b7d;
 $coral: #ff5d73;
-$amber: #f5b454;
-$green: #3ddc97;
+$coral-deep: #d63a52;
+$amber: #e39a2b;
+$green: #239a6b;
 
 .collection-card {
     width: 100%;
@@ -291,13 +292,13 @@ $green: #3ddc97;
     transition: border-color 0.22s ease, box-shadow 0.22s ease;
 
     &:not(.expanded) {
-        box-shadow: 0 14px 40px rgba(0, 0, 0, 0.28);
+        box-shadow: 0 14px 40px rgba(15, 23, 42, 0.06);
     }
 
     &.expanded {
         box-shadow:
-            0 22px 60px rgba(0, 0, 0, 0.4),
-            inset 0 1px 0 rgba(255, 255, 255, 0.04);
+            0 22px 60px rgba(15, 23, 42, 0.1),
+            inset 0 1px 0 rgba(255, 255, 255, 0.7);
         border-color: $line-strong;
     }
 
@@ -308,7 +309,7 @@ $green: #3ddc97;
         gap: 14px;
         padding: 14px 16px;
         border-bottom: 1px solid $line;
-        background: rgba(255, 255, 255, 0.02);
+        background: rgba(15, 23, 42, 0.015);
         flex-wrap: nowrap;
     }
 
@@ -328,7 +329,7 @@ $green: #3ddc97;
         transition: color 0.16s ease;
 
         &:hover {
-            color: $coral;
+            color: $coral-deep;
         }
     }
 
@@ -364,12 +365,12 @@ $green: #3ddc97;
         border-radius: 6px;
         font-size: 11px;
         color: $text-mid;
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(226, 232, 248, 0.1);
+        background: rgba(15, 23, 42, 0.045);
+        border: 1px solid rgba(15, 23, 42, 0.08);
         line-height: 1.5;
 
         .el-icon {
-            color: $coral;
+            color: $coral-deep;
         }
     }
 
@@ -391,12 +392,12 @@ $green: #3ddc97;
         padding: 8px;
 
         &:hover {
-            color: $coral;
+            color: $coral-deep;
         }
     }
 
     .delete-btn:hover {
-        color: #ff5d73;
+        color: #d63a52;
     }
 
     .expand-btn {
@@ -431,7 +432,7 @@ $green: #3ddc97;
         flex: 1 1 0;
         min-width: 1px;
         border-radius: 1.5px;
-        background: rgba(255, 255, 255, 0.08);
+        background: rgba(15, 23, 42, 0.1);
         transition: filter 0.16s ease, background 0.16s ease;
 
         &.tick-watched {
@@ -443,7 +444,7 @@ $green: #3ddc97;
         }
 
         &:hover {
-            filter: brightness(1.35);
+            filter: brightness(1.15);
         }
     }
 
@@ -457,7 +458,7 @@ $green: #3ddc97;
     .ledger-percent {
         font-size: 15px;
         font-weight: 700;
-        color: $coral;
+        color: $coral-deep;
     }
 
     .ledger-caption {
@@ -500,41 +501,41 @@ $green: #3ddc97;
     .episode-item {
         position: relative;
         padding: 12px;
-        border: 1px solid rgba(226, 232, 248, 0.12);
+        border: 1px solid rgba(15, 23, 42, 0.12);
         border-radius: 8px;
-        background: rgba(255, 255, 255, 0.03);
+        background: #f8fafd;
         cursor: pointer;
         transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease,
             box-shadow 0.18s ease;
 
         &:hover {
             transform: translateY(-2px);
-            border-color: rgba(226, 232, 248, 0.32);
+            border-color: rgba(15, 23, 42, 0.28);
         }
 
         &.status-watched {
-            background: rgba(61, 220, 151, 0.08);
-            border-color: rgba(61, 220, 151, 0.4);
+            background: rgba(35, 154, 107, 0.08);
+            border-color: rgba(35, 154, 107, 0.38);
 
             &:hover {
-                border-color: rgba(61, 220, 151, 0.7);
+                border-color: rgba(35, 154, 107, 0.68);
             }
         }
 
         &.status-partially-watched {
-            background: rgba(245, 180, 84, 0.08);
-            border-color: rgba(245, 180, 84, 0.42);
+            background: rgba(227, 154, 43, 0.1);
+            border-color: rgba(227, 154, 43, 0.42);
 
             &:hover {
-                border-color: rgba(245, 180, 84, 0.72);
+                border-color: rgba(227, 154, 43, 0.72);
             }
         }
 
         &.selected {
             border-color: $coral;
             box-shadow:
-                0 0 0 2px rgba(255, 93, 115, 0.24),
-                0 10px 24px rgba(0, 0, 0, 0.35);
+                0 0 0 2px rgba(255, 93, 115, 0.22),
+                0 10px 24px rgba(15, 23, 42, 0.08);
             z-index: 1;
         }
     }
@@ -553,7 +554,7 @@ $green: #3ddc97;
     }
 
     .watched-count-badge {
-        color: $coral;
+        color: $coral-deep;
         font-size: 11px;
         font-weight: 700;
         user-select: none;
@@ -597,7 +598,7 @@ $green: #3ddc97;
     }
 
     .status-partially-watched .episode-status {
-        color: $amber;
+        color: #b97b14;
     }
 
     .collection-meta {
@@ -606,7 +607,7 @@ $green: #3ddc97;
         align-items: center;
         gap: 14px;
         padding: 10px 16px;
-        background: rgba(255, 255, 255, 0.015);
+        background: rgba(15, 23, 42, 0.02);
         border-top: 1px solid $line;
         font-size: 11px;
         color: $text-low;

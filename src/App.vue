@@ -444,16 +444,17 @@ onUnmounted(() => {
 </script>
 
 <style scoped lang="scss">
-$bg-deep: #0b0e15;
-$bg-panel: #11151f;
-$bg-panel-2: #151b27;
-$line: rgba(226, 232, 248, 0.1);
-$line-strong: rgba(226, 232, 248, 0.18);
-$text-hi: #eef2f9;
-$text-mid: #b6c0d4;
-$text-low: #7d8799;
+$bg-deep: #f4f6fa;
+$bg-panel: #ffffff;
+$bg-panel-2: #eef1f6;
+$line: rgba(15, 23, 42, 0.1);
+$line-strong: rgba(15, 23, 42, 0.16);
+$text-hi: #161b26;
+$text-mid: #3f4a5c;
+$text-low: #5f6b7d;
 $coral: #ff5d73;
-$amber: #f5b454;
+$coral-deep: #d63a52;
+$amber: #e39a2b;
 
 .app-shell {
     min-height: 100vh;
@@ -469,7 +470,7 @@ $amber: #f5b454;
     position: sticky;
     top: 0;
     z-index: 20;
-    background: rgba(11, 14, 21, 0.82);
+    background: rgba(255, 255, 255, 0.86);
     backdrop-filter: blur(16px) saturate(1.2);
     -webkit-backdrop-filter: blur(16px) saturate(1.2);
     border-bottom: 1px solid $line;
@@ -499,7 +500,7 @@ $amber: #f5b454;
         place-items: center;
         color: #14090c;
         background: linear-gradient(135deg, $coral, #ff8b6b);
-        box-shadow: 0 6px 18px rgba(255, 93, 115, 0.25);
+        box-shadow: 0 6px 18px rgba(255, 93, 115, 0.35);
         flex-shrink: 0;
     }
 
@@ -555,7 +556,7 @@ $amber: #f5b454;
         width: 64px;
         height: 3px;
         border-radius: 2px;
-        background: rgba(255, 255, 255, 0.08);
+        background: rgba(15, 23, 42, 0.08);
         margin-top: 8px;
         overflow: hidden;
 
@@ -585,19 +586,19 @@ $amber: #f5b454;
     border: 1px solid $line-strong;
     border-radius: 14px;
     box-shadow:
-        0 18px 50px rgba(0, 0, 0, 0.35),
-        inset 0 1px 0 rgba(255, 255, 255, 0.04);
+        0 18px 50px rgba(15, 23, 42, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.6);
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
 
     &:focus-within {
         border-color: rgba(255, 93, 115, 0.55);
         box-shadow:
-            0 18px 50px rgba(0, 0, 0, 0.35),
+            0 18px 50px rgba(15, 23, 42, 0.08),
             0 0 0 3px rgba(255, 93, 115, 0.12);
     }
 
     .command-icon {
-        color: $coral;
+        color: $coral-deep;
         display: grid;
         place-items: center;
         flex-shrink: 0;
@@ -670,7 +671,7 @@ $amber: #f5b454;
 
     .batch-info {
         font-size: 12px;
-        color: $coral;
+        color: $coral-deep;
         font-weight: 600;
         padding: 0 4px;
     }
@@ -688,7 +689,7 @@ $amber: #f5b454;
         :deep(.collection-card) {
             border-style: dashed;
             border-color: $coral;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+            box-shadow: 0 20px 50px rgba(15, 23, 42, 0.1);
         }
     }
 
@@ -708,8 +709,8 @@ $amber: #f5b454;
         :deep(.collection-card) {
             border-color: $coral;
             box-shadow:
-                0 0 0 1px rgba(255, 93, 115, 0.6),
-                0 16px 44px rgba(255, 93, 115, 0.16);
+                0 0 0 1px rgba(255, 93, 115, 0.5),
+                0 16px 44px rgba(255, 93, 115, 0.12);
         }
     }
 }
@@ -724,8 +725,9 @@ $amber: #f5b454;
     width: 26px;
     height: 26px;
     border-radius: 8px;
-    background: rgba(11, 14, 21, 0.9);
+    background: #ffffff;
     border: 1px solid $line-strong;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
     visibility: hidden;
     opacity: 0;
     transform: translateY(-4px) scale(0.92);
@@ -746,7 +748,7 @@ $amber: #f5b454;
     padding: 72px 24px 96px;
     border: 1px dashed $line-strong;
     border-radius: 14px;
-    background: rgba(255, 255, 255, 0.014);
+    background: #ffffff;
 
     .empty-art {
         width: 150px;
@@ -779,10 +781,10 @@ $amber: #f5b454;
     z-index: 9999;
     min-width: 196px;
     padding: 6px;
-    background: rgba(24, 30, 43, 0.96);
+    background: rgba(255, 255, 255, 0.96);
     border: 1px solid $line-strong;
     border-radius: 12px;
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
     backdrop-filter: blur(18px);
     -webkit-backdrop-filter: blur(18px);
     animation: popIn 0.16s ease both;
@@ -801,8 +803,8 @@ $amber: #f5b454;
         transition: background 0.15s ease, color 0.15s ease;
 
         &:hover {
-            background: rgba(255, 93, 115, 0.14);
-            color: #ffffff;
+            background: rgba(255, 93, 115, 0.12);
+            color: $text-hi;
         }
 
         &:not(:last-child) {
