@@ -1,47 +1,75 @@
 <template>
-    <el-card
+    <section
         class="collection-card"
         :class="{
             expanded: isExpanded,
         }"
     >
-        <!-- 标题栏 -->
-        <div class="collection-header">
+        <header class="collection-header">
             <div class="header-left">
-                <el-icon class="drag-handle"><Rank /></el-icon>
-                <h3 class="collection-title">
-                    {{ metadata.title }} ({{ metadata.total_episodes }}集)
-                </h3>
+                <el-icon class="drag-handle" :size="18"><Rank /></el-icon>
+                <div class="title-block">
+                    <h3 class="collection-title" :title="metadata.title">
+                        {{ metadata.title }}
+                    </h3>
+                    <div class="title-meta">
+                        <span class="chip">
+                            <el-icon :size="12"><VideoPlay /></el-icon>
+                            {{ metadata.total_episodes }} 集
+                        </span>
+                        <span class="chip chip-up">{{ metadata.up_name }}</span>
+                    </div>
+                </div>
             </div>
             <div class="header-buttons">
-                <el-button
-                    class="delete-btn"
-                    text
-                    :icon="Delete"
-                    @click.stop="deleteCollection(metadata.season_id)"
-                />
-                <el-button
-                    class="refresh-btn"
-                    text
-                    :icon="Refresh"
-                    @click.stop="refreshCollection(metadata.season_id)"
-                />
+                <el-tooltip content="刷新合集" placement="top">
+                    <el-button
+                        class="refresh-btn"
+                        text
+                        :icon="Refresh"
+                        aria-label="刷新合集"
+                        @click.stop="refreshCollection(metadata.season_id)"
+                    />
+                </el-tooltip>
+                <el-tooltip content="删除合集" placement="top">
+                    <el-button
+                        class="delete-btn"
+                        text
+                        :icon="Delete"
+                        aria-label="删除合集"
+                        @click.stop="deleteCollection(metadata.season_id)"
+                    />
+                </el-tooltip>
                 <el-button
                     class="expand-btn"
                     text
-                    :icon="isExpanded ? ArrowDown : ArrowUp"
+                    :icon="isExpanded ? ArrowUp : ArrowDown"
                     @click="toggleExpand"
                 >
                     {{ isExpanded ? "收起" : "展开" }}
                 </el-button>
             </div>
+        </header>
+
+        <div class="ledger-row">
+            <div class="ledger" :title="`已看 ${watchedCount} / ${totalVideos}`">
+                <span
+                    v-for="(tick, index) in ledgerTicks"
+                    :key="index"
+                    class="ledger-tick"
+                    :class="`tick-${tick}`"
+                ></span>
+            </div>
+            <div class="ledger-readout">
+                <span class="ledger-percent mono">{{ watchedPercent }}%</span>
+                <span class="ledger-caption">已看 {{ watchedCount }} / {{ totalVideos }}</span>
+            </div>
         </div>
 
-        <!-- 展开内容区域 -->
         <div class="collection-content" :class="{ 'is-hidden': !isExpanded }">
             <div class="episodes-grid">
                 <div
-                    v-for="episode in metadata.videos"
+                    v-for="(episode, index) in metadata.videos"
                     :key="episode.bvid"
                     class="episode-item"
                     :class="{
@@ -56,48 +84,56 @@
                     @mousedown.prevent.stop="handleAuxClick(episode, $event)"
                     @contextmenu.prevent.stop="showContextMenu(episode, $event)"
                 >
-                    <div class="episode-info">
-                        <span class="episode-title">{{
-                            truncateTitle(episode.title, 10)
+                    <div class="episode-top">
+                        <span class="episode-index mono">{{
+                            String(index + 1).padStart(2, "0")
                         }}</span>
-                        <span class="episode-duration">{{
+                        <span
+                            v-if="episode.watched_count > 0"
+                            class="watched-count-badge mono"
+                        >
+                            ×{{ episode.watched_count }}
+                        </span>
+                    </div>
+                    <p class="episode-title">{{ episode.title }}</p>
+                    <div class="episode-foot">
+                        <span class="episode-duration mono">{{
                             formatSecondsToHMS(episode.duration)
                         }}</span>
-                    </div>
-                    <div
-                        v-if="episode.status === 'watched'"
-                        class="watched-count-badge"
-                    >
-                        {{ episode.watched_count }}
+                        <span class="episode-status">{{ statusLabel(episode.status) }}</span>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- 元数据信息栏 -->
-        <div class="collection-meta">
-            <div class="meta-left">来自：{{ metadata.up_name }}</div>
-            <div class="meta-right">
-                创建时间: {{ formatDate(metadata.created_at) }} | 最后修改:{{
+        <footer class="collection-meta">
+            <div class="meta-left">来自 <strong>{{ metadata.up_name }}</strong></div>
+            <div class="meta-right mono">
+                创建 {{ formatDate(metadata.created_at) }} · 更新 {{
                     formatDate(metadata.updated_at)
-                }}
-                | 同步时间:{{ formatDate(metadata.last_sync_at) }}
+                }} · 同步 {{ formatDate(metadata.last_sync_at) }}
             </div>
-        </div>
-    </el-card>
+        </footer>
+    </section>
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { formatSecondsToHMS, formatDate } from "@/utils/timeUtils";
 import type { Episode, SeasonInfo } from "@/types";
 
-import { ArrowDown, ArrowUp, Refresh, Delete, Rank } from "@element-plus/icons-vue";
+import {
+    ArrowDown,
+    ArrowUp,
+    Refresh,
+    Delete,
+    Rank,
+    VideoPlay,
+} from "@element-plus/icons-vue";
 import { useSelectedEpisodesStore } from "@/stores/selectedEpisodes";
 import { useContextMenuStore } from "@/stores/contextMenu";
 import { refreshCollection, deleteCollection } from "@/utils/dataOption";
 
-// 定义组件props
 interface Props {
     metadata: Omit<SeasonInfo, "order_index">;
 }
@@ -106,13 +142,57 @@ const props = defineProps<Props>();
 
 const selectedEpisodesStore = useSelectedEpisodesStore();
 
-// 展开/收起状态
 const isExpanded = ref(false);
 
-// 右键菜单
 const contextMenuStore = useContextMenuStore();
 
-// 触发菜单
+const totalVideos = computed(() => props.metadata.videos.length);
+const watchedCount = computed(
+    () =>
+        props.metadata.videos.filter((video) => video.status === "watched").length
+);
+const watchedPercent = computed(() =>
+    totalVideos.value === 0
+        ? 0
+        : Math.round((watchedCount.value / totalVideos.value) * 100)
+);
+const ledgerTicks = computed<string[]>(() => {
+    const videos = props.metadata.videos;
+    const maxTicks = 128;
+
+    if (videos.length <= maxTicks) {
+        return videos.map((video) => video.status);
+    }
+
+    const chunkSize = Math.ceil(videos.length / maxTicks);
+    const ticks: string[] = [];
+
+    for (let i = 0; i < videos.length; i += chunkSize) {
+        const chunk = videos.slice(i, i + chunkSize);
+        const watched = chunk.filter(
+            (video) => video.status === "watched"
+        ).length;
+        const partial = chunk.filter(
+            (video) => video.status === "partially_watched"
+        ).length;
+        let status = "not_watched";
+        if (watched === chunk.length) {
+            status = "watched";
+        } else if (watched > 0 || partial > 0) {
+            status = "partially_watched";
+        }
+        ticks.push(status);
+    }
+
+    return ticks;
+});
+
+const statusLabel = (status: string): string => {
+    if (status === "watched") return "已看完";
+    if (status === "partially_watched") return "部分观看";
+    return "未观看";
+};
+
 const showContextMenu = (episode: Episode, event: MouseEvent) => {
     if (
         selectedEpisodesStore.isSameCollection(episode) &&
@@ -126,69 +206,42 @@ const showContextMenu = (episode: Episode, event: MouseEvent) => {
     contextMenuStore.show(event.clientX, event.clientY);
 };
 
-// 刷新合集函数
-// const refreshCollection = () => {
-//     // 函数逻辑暂时略过
-//     console.log("刷新合集:");
-// };
-
-// 切换展开/收起状态
 const toggleExpand = () => {
     isExpanded.value = !isExpanded.value;
 };
 
-// 选择视频
 const selectEpisode = (episode: Episode, event?: MouseEvent) => {
-    // 检查是否按下了Shift键
     if (event && event.shiftKey && selectedEpisodesStore.lastClickedEpisode) {
         if (selectedEpisodesStore.isSameCollection(episode)) {
-            // 两个视频都在同一个合集中，执行连续选择
             handleShiftSelect(episode);
         } else {
-            // 如果视频不在同一个合集中，清空已选择的视频，只选中当前点击的视频
             handleSingleSelect(episode);
         }
     } else if (event && event.ctrlKey) {
         if (selectedEpisodesStore.isSameCollection(episode)) {
-            // 两个视频都在同一个合集中，执行非连续选择
             handleCtrlSelect(episode);
         } else {
             handleSingleSelect(episode);
         }
     } else {
-        // 普通点击，重新选中当前点击的视频（清除其他选中状态）
         handleSingleSelect(episode);
     }
-    // 更新最后点击的视频
     selectedEpisodesStore.updateLastClickedEpisode(episode);
 };
 
-// 处理Ctrl+左键单击（增加选中当前视频）
 const handleCtrlSelect = (episode: Episode) => {
-    // console.log(selectedEpisodesStore.isSelected(episode));
-    // Ctrl+点击，增加选中当前视频（如果尚未选中）
     if (!selectedEpisodesStore.isSelected(episode)) {
         selectedEpisodesStore.addSelectedEpisode(episode);
     }
-    // console.log(selectedEpisodesStore.selectedEpisodes);
-    // 如果已选中，则不做任何处理
 };
 
-// 处理普通单个选择（清除其他选中状态，只选中当前视频）
 const handleSingleSelect = (episode: Episode) => {
-    // 清空当前选中列表，只选中当前视频
     selectedEpisodesStore.singleSelect(episode);
-    // console.log(selectedEpisodesStore.selectedEpisodes);
 };
 
-// 处理Shift连续选择
 const handleShiftSelect = (currentEpisode: Episode) => {
-    // if (!selectedEpisodesStore.lastClickedEpisode) return;
-
-    // 获取当前合集中的所有视频
     const allEpisodes = props.metadata.videos;
 
-    // 找到两个视频的索引
     const lastIndex = allEpisodes.findIndex(
         (e) => e.bvid === selectedEpisodesStore.lastClickedEpisode!.bvid
     );
@@ -198,160 +251,230 @@ const handleShiftSelect = (currentEpisode: Episode) => {
 
     if (lastIndex === -1 || currentIndex === -1) return;
 
-    // 确定范围（包含边界）
     const startIndex = Math.min(lastIndex, currentIndex);
     const endIndex = Math.max(lastIndex, currentIndex);
 
-    // 获取范围内的所有视频
     const episodesInRange = allEpisodes.slice(startIndex, endIndex + 1);
 
-    // 清空当前选中列表，然后选中范围内的视频
     selectedEpisodesStore.multiSelect(episodesInRange);
 };
 
-// let clickTimer = null;
-// 导航到视频链接
 const navigateToVideo = (bvid: string) => {
-    // console.log("导航到视频:", bvid);
     window.open(`https://b23.tv/${bvid}`, "_blank");
-    // selectedEpisodesStore.updateLastClickedEpisode(currentEpisode);
 };
 
-// 处理鼠标中键点击事件
 const handleAuxClick = (episode: Episode, event: MouseEvent) => {
-    // 检查是否是中键点击 (button值为1表示中键)
     if (event.button === 1) {
         navigateToVideo(episode.bvid);
     }
 };
-
-// 截断标题函数
-const truncateTitle = (title: string, maxLength: number) => {
-    if (!title) return "";
-    return title.length > maxLength
-        ? title.substring(0, maxLength) + "..."
-        : title;
-};
 </script>
 
 <style scoped lang="scss">
-$primary-color: #409eff;
-$primary-light: #ecf5ff;
-$success-color: #4caf50;
-$success-light: #e8f5e9;
-$warning-color: #8bc34a;
-$text-primary: #303133;
-$text-secondary: #909399;
-$text-meta: #606266;
-$border-color: #e4e7ed;
-$border-light: #ebeef5;
-$bg-light: #f5f5f5;
-$bg-lighter: #fafafa;
-$shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-$expanded-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+$bg-panel: #11151f;
+$line: rgba(226, 232, 248, 0.1);
+$line-strong: rgba(226, 232, 248, 0.18);
+$text-hi: #eef2f9;
+$text-mid: #b6c0d4;
+$text-low: #7d8799;
+$coral: #ff5d73;
+$amber: #f5b454;
+$green: #3ddc97;
 
 .collection-card {
-    margin: 10px 0;
-    border-radius: 8px;
-    overflow: hidden;
-    transition: box-shadow 0.3s ease;
     width: 100%;
     box-sizing: border-box;
+    background: $bg-panel;
+    border: 1px solid $line;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: border-color 0.22s ease, box-shadow 0.22s ease;
 
     &:not(.expanded) {
-        box-shadow: $shadow;
+        box-shadow: 0 14px 40px rgba(0, 0, 0, 0.28);
     }
 
     &.expanded {
-        box-shadow: $expanded-shadow;
+        box-shadow:
+            0 22px 60px rgba(0, 0, 0, 0.4),
+            inset 0 1px 0 rgba(255, 255, 255, 0.04);
+        border-color: $line-strong;
     }
 
     .collection-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 12px 16px;
-        background-color: $bg-light;
+        gap: 14px;
+        padding: 14px 16px;
+        border-bottom: 1px solid $line;
+        background: rgba(255, 255, 255, 0.02);
         flex-wrap: nowrap;
     }
 
     .header-left {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 12px;
         flex: 1;
         min-width: 0;
     }
 
     .drag-handle {
-        cursor: move;
-        color: $text-secondary;
+        cursor: grab;
+        color: $text-low;
         font-size: 18px;
         flex-shrink: 0;
+        transition: color 0.16s ease;
 
         &:hover {
-            color: $primary-color;
+            color: $coral;
         }
+    }
+
+    .title-block {
+        min-width: 0;
+        flex: 1;
     }
 
     .collection-title {
         margin: 0;
         font-size: 16px;
-        font-weight: 600;
-        color: $text-primary;
+        font-weight: 700;
+        color: $text-hi;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        line-height: 1.4;
+    }
+
+    .title-meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 4px;
+        flex-wrap: wrap;
+    }
+
+    .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 7px;
+        border-radius: 6px;
+        font-size: 11px;
+        color: $text-mid;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(226, 232, 248, 0.1);
+        line-height: 1.5;
+
+        .el-icon {
+            color: $coral;
+        }
+    }
+
+    .chip-up {
+        color: $text-low;
     }
 
     .header-buttons {
         display: flex;
-        gap: 8px;
+        gap: 2px;
         align-items: center;
+        flex-shrink: 0;
+    }
+
+    .refresh-btn,
+    .delete-btn {
+        font-size: 16px;
+        color: $text-low;
+        padding: 8px;
+
+        &:hover {
+            color: $coral;
+        }
+    }
+
+    .delete-btn:hover {
+        color: #ff5d73;
     }
 
     .expand-btn {
-        font-size: 14px;
-        color: $text-secondary;
+        font-size: 13px;
+        color: $text-mid;
+        font-weight: 600;
+        padding: 8px 10px;
 
-        &:focus {
-            outline: none;
+        &:hover {
+            color: $text-hi;
         }
     }
 
-    .refresh-btn {
-        font-size: 14px;
-        color: $text-secondary;
+    .ledger-row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 12px 16px;
+        border-bottom: 1px solid $line;
+    }
 
-        &:focus {
-            outline: none;
+    .ledger {
+        flex: 1;
+        min-width: 0;
+        height: 8px;
+        display: flex;
+        gap: 2px;
+        align-items: stretch;
+    }
+
+    .ledger-tick {
+        flex: 1 1 0;
+        min-width: 1px;
+        border-radius: 1.5px;
+        background: rgba(255, 255, 255, 0.08);
+        transition: filter 0.16s ease, background 0.16s ease;
+
+        &.tick-watched {
+            background: $green;
         }
+
+        &.tick-partially_watched {
+            background: $amber;
+        }
+
+        &:hover {
+            filter: brightness(1.35);
+        }
+    }
+
+    .ledger-readout {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        flex-shrink: 0;
+    }
+
+    .ledger-percent {
+        font-size: 15px;
+        font-weight: 700;
+        color: $coral;
+    }
+
+    .ledger-caption {
+        font-size: 11px;
+        color: $text-low;
+        white-space: nowrap;
     }
 
     .collection-content {
         padding: 16px;
         width: 100%;
         box-sizing: border-box;
-        max-height: calc(
-            3 * (60px + 12px)
-        ); // 3行视频的高度，每行视频约60px高，gap为12px
-        overflow-y: auto; // 当内容超过最大高度时显示滚动条
-        /* 始终预留滚动条空间，防止内容跳动 */
-        scrollbar-gutter: stable; /* 确保滚动条空间始终预留 */
-        scrollbar-width: thin; /* Firefox */
-
-        &::-webkit-scrollbar {
-            width: 12px;
-        }
-
-        &::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        &::-webkit-scrollbar-thumb {
-            background-color: rgba(0, 0, 0, 0.3);
-            border-radius: 6px;
-        }
+        max-height: calc(3 * (116px + 10px));
+        overflow-y: auto;
+        scrollbar-gutter: stable;
+        scrollbar-width: thin;
+        transition: max-height 0.28s ease, padding 0.28s ease;
 
         &.is-hidden {
             max-height: 0;
@@ -368,137 +491,187 @@ $expanded-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 
     .episodes-grid {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 12px;
+        grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+        gap: 10px;
         width: 100%;
         box-sizing: border-box;
     }
 
     .episode-item {
-        padding: 12px;
-        border: 1px solid $border-color;
-        border-radius: 6px;
-        background-color: $bg-lighter;
-        transition: all 0.2s ease;
-        cursor: pointer;
         position: relative;
+        padding: 12px;
+        border: 1px solid rgba(226, 232, 248, 0.12);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.03);
+        cursor: pointer;
+        transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease,
+            box-shadow 0.18s ease;
 
         &:hover {
-            border-color: $primary-color;
-            background-color: $primary-light;
             transform: translateY(-2px);
+            border-color: rgba(226, 232, 248, 0.32);
         }
 
         &.status-watched {
-            background-color: $success-light;
-            border-color: $success-color;
+            background: rgba(61, 220, 151, 0.08);
+            border-color: rgba(61, 220, 151, 0.4);
+
+            &:hover {
+                border-color: rgba(61, 220, 151, 0.7);
+            }
         }
 
         &.status-partially-watched {
-            background: linear-gradient(
-                to right,
-                $success-light 50%,
-                $bg-lighter 50%
-            );
-            border-color: $warning-color;
+            background: rgba(245, 180, 84, 0.08);
+            border-color: rgba(245, 180, 84, 0.42);
+
+            &:hover {
+                border-color: rgba(245, 180, 84, 0.72);
+            }
         }
 
         &.selected {
-            // border-color: #984f31 !important; /* 黄色系边框 */
-            box-shadow: 0 0 10px 3px rgba(238, 121, 89, 0.6); /* 黄色系阴影 */
-            position: relative;
+            border-color: $coral;
+            box-shadow:
+                0 0 0 2px rgba(255, 93, 115, 0.24),
+                0 10px 24px rgba(0, 0, 0, 0.35);
             z-index: 1;
-
-            // &.status-partially-watched {
-            // border-color: #984f31 !important;
-            // }
-
-            // &.status-watched {
-            // border-color: #984f31 !important;
-            // }
-
-            // &.status-not-watched {
-            // border-color: #984f31 !important;
-            // }
         }
+    }
 
-        .episode-info {
-            display: flex;
-            flex-direction: column;
-        }
+    .episode-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+    }
 
-        .episode-title {
-            font-size: 14px;
-            color: $text-primary;
-            margin-bottom: 4px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            user-select: none;
-        }
+    .episode-index {
+        font-size: 11px;
+        color: $text-low;
+        user-select: none;
+    }
 
-        .episode-duration {
-            font-size: 12px;
-            color: $text-secondary;
-            user-select: none;
-        }
+    .watched-count-badge {
+        color: $coral;
+        font-size: 11px;
+        font-weight: 700;
+        user-select: none;
+    }
 
-        .watched-count-badge {
-            position: absolute;
-            top: 2px;
-            right: 2px;
-            color: $primary-color;
-            font-size: 10px;
-            font-weight: bold;
-            z-index: 1;
-            // border-radius: 8px;
-            padding: 1px 4px;
-            line-height: 1;
-            user-select: none;
-        }
+    .episode-title {
+        margin: 8px 0 10px;
+        font-size: 13px;
+        line-height: 1.45;
+        color: $text-hi;
+        min-height: 2.9em;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        overflow: hidden;
+        user-select: none;
+    }
+
+    .episode-foot {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+    }
+
+    .episode-duration {
+        font-size: 11px;
+        color: $text-low;
+        user-select: none;
+    }
+
+    .episode-status {
+        font-size: 11px;
+        font-weight: 600;
+        color: $text-low;
+        user-select: none;
+    }
+
+    .status-watched .episode-status {
+        color: $green;
+    }
+
+    .status-partially-watched .episode-status {
+        color: $amber;
     }
 
     .collection-meta {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 8px 16px;
-        background-color: #f9f9f9;
-        border: 1px solid $border-light;
-        border-top: none;
-        border-radius: 0 0 8px 8px;
-        font-size: 12px;
-        color: $text-meta;
+        gap: 14px;
+        padding: 10px 16px;
+        background: rgba(255, 255, 255, 0.015);
+        border-top: 1px solid $line;
+        font-size: 11px;
+        color: $text-low;
 
-        .meta-left {
-            text-align: left;
-            flex: 1 1 auto;
+        strong {
+            color: $text-mid;
+            font-weight: 600;
         }
+    }
 
-        .meta-right {
-            text-align: right;
-            flex: 1 1 auto;
-            user-select: none;
-        }
+    .meta-left {
+        text-align: left;
+        flex: 1 1 auto;
+    }
+
+    .meta-right {
+        text-align: right;
+        flex: 1 1 auto;
+        user-select: none;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 }
 
-/* 响应式设计 */
-@media (max-width: 768px) {
+@media (max-width: 900px) {
     .episodes-grid {
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    }
+}
+
+@media (max-width: 720px) {
+    .collection-header {
+        flex-wrap: wrap;
+        align-items: flex-start;
+    }
+
+    .header-buttons {
+        margin-left: auto;
+    }
+
+    .episodes-grid {
+        grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
         gap: 8px;
+    }
+
+    .ledger-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+
+    .ledger-readout {
+        justify-content: space-between;
     }
 
     .collection-meta {
         flex-direction: column;
+        align-items: flex-start;
         gap: 4px;
-        text-align: center;
     }
 
     .meta-left,
     .meta-right {
-        text-align: center;
+        text-align: left;
         width: 100%;
     }
 }

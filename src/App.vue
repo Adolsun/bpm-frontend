@@ -1,136 +1,267 @@
 <template>
-    <div class="container">
-        <div class="input-section">
-            <h1>B站视频进度管理</h1>
-            <div class="input-group">
-                <el-input
-                    v-model.trim="videoUrl"
-                    placeholder="请输入B站视频链接，例如：https://www.bilibili.com/video/BV12d4y1G7jT/"
-                    size="large"
-                    class="url-input"
-                    @keyup.enter="createProgress"
-                />
-                <el-button
-                    type="primary"
-                    size="large"
-                    @click="createProgress"
-                    :loading="isLoading"
-                    class="create-btn"
-                >
-                    {{ isLoading ? "加载中..." : "创建进度" }}
-                </el-button>
-            </div>
-        </div>
-
-        <div class="collections-container">
-            <!-- 批量操作工具栏 -->
-            <div v-show="seasonInfosNum > 0" class="batch-toolbar">
-                <el-button
-                    class="batch-toggle-btn"
-                    :type="isBatchMode ? 'primary' : 'default'"
-                    @click="toggleBatchMode"
-                >
-                    {{ isBatchMode ? "退出批量" : "批量操作" }}
-                </el-button>
-                <el-button
-                    plain
-                    class="select-all-btn"
-                    @click="handleToggleSelectAll"
-                    :disabled="!isBatchMode"
-                >
-                    {{ allSelected ? "取消全选" : "全选" }}
-                </el-button>
-                <el-button
-                    plain
-                    type="primary"
-                    @click="batchRefresh"
-                    :loading="batchUpdating"
-                    :disabled="selectedCount === 0"
-                >
-                    批量刷新
-                </el-button>
-                <el-button
-                    plain
-                    type="danger"
-                    @click="batchDelete"
-                    :loading="batchDeleting"
-                    :disabled="selectedCount === 0"
-                >
-                    批量删除
-                </el-button>
-                <span class="batch-info">已选 {{ selectedCount }} 个合集</span>
-            </div>
-
-            <!-- 视频合集列表 -->
-            <draggable
-                v-model="seasonInfosStore.seasonInfos"
-                item-key="season_id"
-                ghost-class="ghost"
-                @change="handleDragChange"
-            >
-                <template #item="{ element }">
-                    <div
-                        class="collection-wrapper"
-                        :class="{
-                            'batch-mode': isBatchMode,
-                            'collection-selected': selectedCollectionsStore.isSelected(element.season_id),
-                        }"
-                        @click="handleCollectionRowClick(element.season_id)"
-                    >
-                        <div class="batch-checkbox-area" @click.stop>
-                            <el-checkbox
-                                :model-value="selectedCollectionsStore.isSelected(element.season_id)"
-                                @change="selectedCollectionsStore.toggleSelect(element.season_id)"
-                            />
-                        </div>
-                        <VideoCollection :metadata="element" />
+    <div class="app-shell">
+        <header class="masthead">
+            <div class="masthead-inner">
+                <div class="brand">
+                    <div class="brand-mark" aria-hidden="true">
+                        <el-icon :size="18"><VideoPlay /></el-icon>
                     </div>
-                </template>
-            </draggable>
-
-            <!-- 当没有合集时的提示 -->
-            <div
-                v-if="seasonInfosStore.seasonInfosNum === 0"
-                class="empty-placeholder"
-            >
-                <p>暂无视频合集，请在上方输入B站视频链接创建进度</p>
+                    <div class="brand-copy">
+                        <strong class="brand-name">BPM</strong>
+                        <span class="brand-sub">B站合集进度管理</span>
+                    </div>
+                </div>
+                <div class="masthead-stats">
+                    <div class="stat">
+                        <span class="stat-value mono">{{ seasonInfosNum }}</span>
+                        <span class="stat-label">合集</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value mono">{{ totalEpisodes }}</span>
+                        <span class="stat-label">视频</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value mono">{{ watchedEpisodes }}</span>
+                        <span class="stat-label">已看完</span>
+                    </div>
+                    <div class="stat stat-progress">
+                        <span class="stat-value mono">{{ progressPercent }}%</span>
+                        <span class="stat-label">总进度</span>
+                        <div class="stat-track" aria-hidden="true">
+                            <i :style="{ width: progressPercent + '%' }"></i>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
-    </div>
-    <div
-        class="context-menu"
-        v-show="contextMenuStore.showContextMenu"
-        :style="{
-            left: contextMenuStore.x + 'px',
-            top: contextMenuStore.y + 'px',
-        }"
-    >
-        <div class="context-menu-item" @click.stop="changeWatchedCount(1)">
-            观看次数+1
-        </div>
-        <div class="context-menu-item" @click.stop="changeWatchedCount(2)">
-            观看次数-1
-        </div>
-        <div class="context-menu-item" @click.stop="changeWatchedCount(0)">
-            部分观看
+        </header>
+
+        <main class="main">
+            <section class="command-deck" aria-label="创建进度">
+                <div class="command-bar">
+                    <span class="command-icon" aria-hidden="true">
+                        <el-icon :size="18"><Link /></el-icon>
+                    </span>
+                    <el-input
+                        v-model.trim="videoUrl"
+                        placeholder="粘贴 B 站视频链接，例如 https://www.bilibili.com/video/BV12d4y1G7jT/"
+                        size="large"
+                        class="url-input"
+                        @keyup.enter="createProgress"
+                    />
+                    <el-button
+                        type="primary"
+                        size="large"
+                        class="create-btn"
+                        :loading="isLoading"
+                        @click="createProgress"
+                    >
+                        {{ isLoading ? "创建中" : "创建进度" }}
+                    </el-button>
+                </div>
+            </section>
+
+            <section class="queue-section" aria-label="合集队列">
+                <div v-show="seasonInfosNum > 0" class="batch-toolbar queue-toolbar">
+                    <div class="queue-heading">
+                        <span class="queue-title">合集队列</span>
+                        <span class="queue-count mono">{{ seasonInfosNum }} 个合集</span>
+                    </div>
+                    <div class="queue-actions">
+                        <template v-if="!isBatchMode">
+                            <el-button class="batch-toggle-btn" @click="toggleBatchMode">
+                                批量操作
+                            </el-button>
+                        </template>
+                        <template v-else>
+                            <span class="batch-info mono">已选 {{ selectedCount }} 个</span>
+                            <el-button
+                                class="select-all-btn"
+                                plain
+                                @click="handleToggleSelectAll"
+                            >
+                                {{ allSelected ? "取消全选" : "全选" }}
+                            </el-button>
+                            <el-button
+                                plain
+                                type="primary"
+                                :loading="batchUpdating"
+                                :disabled="selectedCount === 0"
+                                @click="batchRefresh"
+                            >
+                                批量刷新
+                            </el-button>
+                            <el-button
+                                plain
+                                type="danger"
+                                :loading="batchDeleting"
+                                :disabled="selectedCount === 0"
+                                @click="batchDelete"
+                            >
+                                批量删除
+                            </el-button>
+                            <el-button class="batch-toggle-btn" text @click="toggleBatchMode">
+                                退出
+                            </el-button>
+                        </template>
+                    </div>
+                </div>
+
+                <draggable
+                    v-model="seasonInfosStore.seasonInfos"
+                    item-key="season_id"
+                    ghost-class="ghost"
+                    @change="handleDragChange"
+                >
+                    <template #item="{ element }">
+                        <div
+                            class="collection-wrapper"
+                            :class="{
+                                'batch-mode': isBatchMode,
+                                'collection-selected': selectedCollectionsStore.isSelected(
+                                    element.season_id
+                                ),
+                            }"
+                            @click="handleCollectionRowClick(element.season_id)"
+                        >
+                            <div class="batch-checkbox-area" @click.stop>
+                                <el-checkbox
+                                    :model-value="selectedCollectionsStore.isSelected(
+                                        element.season_id
+                                    )"
+                                    @change="selectedCollectionsStore.toggleSelect(
+                                        element.season_id
+                                    )"
+                                />
+                            </div>
+                            <VideoCollection :metadata="element" />
+                        </div>
+                    </template>
+                </draggable>
+
+                <div v-if="seasonInfosStore.seasonInfosNum === 0" class="empty-placeholder">
+                    <div class="empty-art" aria-hidden="true">
+                        <svg viewBox="0 0 160 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect
+                                x="4"
+                                y="4"
+                                width="152"
+                                height="88"
+                                rx="8"
+                                stroke="currentColor"
+                                stroke-opacity="0.35"
+                            />
+                            <path
+                                d="M24 18h16v12H24zM44 18h16v12H44zM64 18h16v12H64zM84 18h16v12H84zM104 18h16v12H104z"
+                                stroke="currentColor"
+                                stroke-opacity="0.35"
+                            />
+                            <rect
+                                x="18"
+                                y="40"
+                                width="42"
+                                height="30"
+                                rx="4"
+                                fill="#ff5d73"
+                                fill-opacity="0.16"
+                                stroke="#ff5d73"
+                                stroke-opacity="0.7"
+                            />
+                            <path d="M32 46l20 9-20 9z" fill="#ff5d73" />
+                            <rect
+                                x="70"
+                                y="44"
+                                width="10"
+                                height="22"
+                                rx="2"
+                                fill="currentColor"
+                                fill-opacity="0.22"
+                            />
+                            <rect
+                                x="86"
+                                y="44"
+                                width="10"
+                                height="22"
+                                rx="2"
+                                fill="currentColor"
+                                fill-opacity="0.22"
+                            />
+                            <rect
+                                x="102"
+                                y="44"
+                                width="10"
+                                height="22"
+                                rx="2"
+                                fill="currentColor"
+                                fill-opacity="0.22"
+                            />
+                            <rect
+                                x="118"
+                                y="44"
+                                width="10"
+                                height="22"
+                                rx="2"
+                                fill="currentColor"
+                                fill-opacity="0.22"
+                            />
+                            <rect
+                                x="134"
+                                y="44"
+                                width="10"
+                                height="22"
+                                rx="2"
+                                fill="currentColor"
+                                fill-opacity="0.22"
+                            />
+                        </svg>
+                    </div>
+                    <p class="empty-title">队列还是空的</p>
+                    <p class="empty-copy">粘贴一个 B 站视频链接，创建第一个进度合集</p>
+                </div>
+            </section>
+        </main>
+
+        <div
+            class="context-menu"
+            v-show="contextMenuStore.showContextMenu"
+            :style="{
+                left: contextMenuStore.x + 'px',
+                top: contextMenuStore.y + 'px',
+            }"
+        >
+            <div class="context-menu-item" @click.stop="changeWatchedCount(1)">
+                <el-icon :size="15"><Plus /></el-icon>
+                <span>观看次数 +1</span>
+            </div>
+            <div class="context-menu-item" @click.stop="changeWatchedCount(2)">
+                <el-icon :size="15"><Minus /></el-icon>
+                <span>观看次数 -1</span>
+            </div>
+            <div class="context-menu-item" @click.stop="changeWatchedCount(0)">
+                <el-icon :size="15"><VideoPause /></el-icon>
+                <span>标记部分观看</span>
+            </div>
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, computed } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import { ElMessage } from "element-plus";
+import { Link, Minus, Plus, VideoPause, VideoPlay } from "@element-plus/icons-vue";
 import draggable from "vuedraggable";
-import { changeWatchedCount, updateCollectionOrder, batchDeleteCollections, batchUpdateCollections } from "@/utils/dataOption";
+import {
+    changeWatchedCount,
+    updateCollectionOrder,
+    batchDeleteCollections,
+    batchUpdateCollections,
+} from "@/utils/dataOption";
 import VideoCollection from "@/components/VideoCollection.vue";
 import { useContextMenuStore } from "@/stores/contextMenu";
 import { useSelectedEpisodesStore } from "@/stores/selectedEpisodes";
 import { useSelectedCollectionsStore } from "@/stores/selectedCollections";
 import { useSeasonInfosStore } from "@/stores/seasonInfos";
 
-// 右键菜单
 const contextMenuStore = useContextMenuStore();
-
 const selectedEpisodesStore = useSelectedEpisodesStore();
 const selectedCollectionsStore = useSelectedCollectionsStore();
 const seasonInfosStore = useSeasonInfosStore();
@@ -142,6 +273,22 @@ const allSelected = computed(() => {
     const ids = seasonInfosStore.seasonInfos.map((s) => s.season_id);
     return selectedCollectionsStore.isAllSelected(ids);
 });
+
+const totalEpisodes = computed(() =>
+    seasonInfosStore.seasonInfos.reduce((sum, item) => sum + item.videos.length, 0)
+);
+const watchedEpisodes = computed(() =>
+    seasonInfosStore.seasonInfos.reduce(
+        (sum, item) =>
+            sum + item.videos.filter((video) => video.status === "watched").length,
+        0
+    )
+);
+const progressPercent = computed(() =>
+    totalEpisodes.value === 0
+        ? 0
+        : Math.round((watchedEpisodes.value / totalEpisodes.value) * 100)
+);
 
 const toggleBatchMode = () => {
     selectedCollectionsStore.toggleBatchMode();
@@ -158,15 +305,17 @@ const handleCollectionRowClick = (seasonId: number) => {
     }
 };
 
-const handleDragChange = async (evt: { moved?: { oldIndex: number; newIndex: number } }) => {
+const handleDragChange = async (evt: {
+    moved?: { oldIndex: number; newIndex: number };
+}) => {
     if (!evt.moved) return;
 
     const { oldIndex, newIndex } = evt.moved;
     const infos = seasonInfosStore.seasonInfos;
-    
+
     const minIndex = Math.min(oldIndex, newIndex);
     const maxIndex = Math.max(oldIndex, newIndex);
-    
+
     const updates = infos.slice(minIndex, maxIndex + 1).map((item, idx) => ({
         season_id: item.season_id,
         order_index: minIndex + idx,
@@ -183,20 +332,18 @@ const handleDragChange = async (evt: { moved?: { oldIndex: number; newIndex: num
 
 onMounted(async () => {
     try {
-        // console.log("开始获取视频信息...");
         seasonInfosStore.getAllSessonInfos();
     } catch (error) {
         ElMessage.error(`获取视频信息失败: ${(error as Error).message}`);
     }
+
+    document.addEventListener("click", handlePageClick, true);
+    document.addEventListener("scroll", handlePageScroll, true);
 });
 
-// 输入的视频链接
 const videoUrl = ref("");
-
-// 添加加载状态
 const isLoading = ref(false);
 
-// 创建进度（获取视频信息并添加到列表）
 const createProgress = async () => {
     if (!videoUrl.value) {
         ElMessage.error("请输入视频链接");
@@ -207,8 +354,7 @@ const createProgress = async () => {
 
     try {
         await seasonInfosStore.addOneSeasonInfo(videoUrl.value);
-
-        ElMessage.success("视频信息获取成功！");
+        ElMessage.success("视频信息获取成功");
     } catch (error) {
         ElMessage.error(`获取视频信息失败: ${(error as Error).message}`);
     } finally {
@@ -217,7 +363,6 @@ const createProgress = async () => {
     }
 };
 
-// 批量操作loading状态
 const batchUpdating = ref(false);
 const batchDeleting = ref(false);
 
@@ -250,31 +395,22 @@ const batchDelete = async () => {
     }
 };
 
-// 处理页面点击事件（用于取消选中）
 const handlePageClick = (event: MouseEvent) => {
-    // 检查右键菜单是否显示
     if (contextMenuStore.showContextMenu) {
-        // 如果菜单显示且点击在菜单外部，则只隐藏菜单，阻止事件继续传播
         const contextMenu = document.querySelector(".context-menu");
         if (contextMenu && !contextMenu.contains(event.target as Node)) {
             contextMenuStore.hide();
-            event.stopImmediatePropagation(); // 阻止事件继续传播到其他监听器
+            event.stopImmediatePropagation();
         }
-        return; // 如果菜单显示，不执行后续的取消选中逻辑
+        return;
     }
-    // console.log("页面点击:");
 
-    // 检查点击的元素是否是视频项目或其子元素
-    const isClickOnEpisodeItem = (event.target as Element).closest(
-        ".episode-item"
-    );
+    const isClickOnEpisodeItem = (event.target as Element).closest(".episode-item");
 
-    // 如果点击的不是视频项目，则清除视频选中状态
     if (!isClickOnEpisodeItem) {
         selectedEpisodesStore.clearSelectedEpisodes();
     }
 
-    // 如果点击的不是合集卡片及其子元素，则清除合集选中状态
     const isClickOnCollectionCard = (event.target as Element).closest(
         ".collection-card"
     );
@@ -284,7 +420,11 @@ const handlePageClick = (event: MouseEvent) => {
     const isClickOnCollectionWrapper = (event.target as Element).closest(
         ".collection-wrapper"
     );
-    if (!isClickOnCollectionCard && !isClickOnBatchToolbar && !isClickOnCollectionWrapper) {
+    if (
+        !isClickOnCollectionCard &&
+        !isClickOnBatchToolbar &&
+        !isClickOnCollectionWrapper
+    ) {
         if (!selectedCollectionsStore.isBatchMode) {
             selectedCollectionsStore.clearSelection();
         }
@@ -297,13 +437,6 @@ const handlePageScroll = () => {
     }
 };
 
-// 组件挂载时添加全局事件监听器
-onMounted(() => {
-    document.addEventListener("click", handlePageClick, true);
-    document.addEventListener("scroll", handlePageScroll, true);
-});
-
-// 组件卸载时移除全局事件监听器
 onUnmounted(() => {
     document.removeEventListener("click", handlePageClick, true);
     document.removeEventListener("scroll", handlePageScroll, true);
@@ -311,227 +444,388 @@ onUnmounted(() => {
 </script>
 
 <style scoped lang="scss">
-// 定义SCSS变量
-$primary-color: #409eff;
-$primary-light: #ecf5ff;
-$text-primary: #303133;
-$text-secondary: #909399;
-$text-meta: #606266;
-$border-color: #e4e7ed;
-$border-light: #ebeef5;
-$bg-light: #f5f5f5;
-$bg-lighter: #fafafa;
-$shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-$expanded-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+$bg-deep: #0b0e15;
+$bg-panel: #11151f;
+$bg-panel-2: #151b27;
+$line: rgba(226, 232, 248, 0.1);
+$line-strong: rgba(226, 232, 248, 0.18);
+$text-hi: #eef2f9;
+$text-mid: #b6c0d4;
+$text-low: #7d8799;
+$coral: #ff5d73;
+$amber: #f5b454;
 
-.container {
-    max-width: 1600px;
-    margin: 0 auto;
-    padding: 20px 40px; /* 减少两边留白，增加内容区域 */
-    min-height: calc(
-        100vh - 120px
-    ); /* 减去上下padding和其他元素高度，让内容自然撑开 */
-    flex: 1;
+.app-shell {
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
-    // overflow-y: scroll;
 }
 
-.input-section {
-    text-align: center;
-    margin-bottom: 30px;
+.main {
+    flex: 1;
+}
 
-    h1 {
-        color: $text-primary;
-        margin-bottom: 24px;
+.masthead {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: rgba(11, 14, 21, 0.82);
+    backdrop-filter: blur(16px) saturate(1.2);
+    -webkit-backdrop-filter: blur(16px) saturate(1.2);
+    border-bottom: 1px solid $line;
+
+    .masthead-inner {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 14px 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+    }
+
+    .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 0;
+    }
+
+    .brand-mark {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: grid;
+        place-items: center;
+        color: #14090c;
+        background: linear-gradient(135deg, $coral, #ff8b6b);
+        box-shadow: 0 6px 18px rgba(255, 93, 115, 0.25);
+        flex-shrink: 0;
+    }
+
+    .brand-copy {
+        display: flex;
+        flex-direction: column;
+        line-height: 1.25;
+    }
+
+    .brand-name {
+        font-size: 15px;
+        font-weight: 800;
+        color: $text-hi;
+    }
+
+    .brand-sub {
+        font-size: 11px;
+        color: $text-low;
+    }
+
+    .masthead-stats {
+        display: flex;
+        align-items: stretch;
+        gap: 26px;
+    }
+
+    .stat {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        justify-content: center;
+        min-width: 44px;
+    }
+
+    .stat-value {
+        font-size: 17px;
+        font-weight: 700;
+        color: $text-hi;
+        line-height: 1.1;
+    }
+
+    .stat-label {
+        font-size: 11px;
+        color: $text-low;
+        margin-top: 3px;
+    }
+
+    .stat-progress {
+        position: relative;
+    }
+
+    .stat-track {
+        width: 64px;
+        height: 3px;
+        border-radius: 2px;
+        background: rgba(255, 255, 255, 0.08);
+        margin-top: 8px;
+        overflow: hidden;
+
+        i {
+            display: block;
+            height: 100%;
+            border-radius: inherit;
+            background: linear-gradient(90deg, $coral, $amber);
+        }
     }
 }
 
-.input-group {
-    display: flex;
-    gap: 12px;
-    justify-content: center;
-    align-items: center;
-    flex-wrap: wrap;
-}
-
-.url-input {
-    width: 600px;
-    max-width: 100%;
-}
-
-.create-btn {
-    min-width: 120px;
-}
-
-.collections-container {
+.command-deck {
+    max-width: 1200px;
     width: 100%;
-    min-height: 0;
-    flex: 1;
+    margin: 0 auto;
+    padding: 30px 24px 6px;
+    box-sizing: border-box;
+}
+
+.command-bar {
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 8px 8px 16px;
+    background: $bg-panel;
+    border: 1px solid $line-strong;
+    border-radius: 14px;
+    box-shadow:
+        0 18px 50px rgba(0, 0, 0, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+    &:focus-within {
+        border-color: rgba(255, 93, 115, 0.55);
+        box-shadow:
+            0 18px 50px rgba(0, 0, 0, 0.35),
+            0 0 0 3px rgba(255, 93, 115, 0.12);
+    }
+
+    .command-icon {
+        color: $coral;
+        display: grid;
+        place-items: center;
+        flex-shrink: 0;
+    }
+
+    .url-input {
+        flex: 1;
+        min-width: 0;
+
+        :deep(.el-input__wrapper) {
+            background: transparent;
+            box-shadow: none;
+            padding: 0;
+        }
+
+        :deep(.el-input__inner) {
+            font-size: 15px;
+            height: 42px;
+        }
+    }
+
+    .create-btn {
+        min-width: 132px;
+        height: 44px;
+        border-radius: 10px;
+    }
+}
+
+.queue-section {
+    max-width: 1200px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 24px 24px 56px;
+    box-sizing: border-box;
 }
 
 .batch-toolbar {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 10px 16px;
-    margin-bottom: 12px;
-    background-color: #f0f7ff;
-    border: 1px solid #d6e8fa;
-    border-radius: 8px;
-    animation: slideIn 0.2s ease;
+    justify-content: space-between;
+    gap: 14px;
+    padding-bottom: 14px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid $line;
+    flex-wrap: wrap;
+
+    .queue-heading {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+    }
+
+    .queue-title {
+        font-size: 18px;
+        font-weight: 800;
+        color: $text-hi;
+    }
+
+    .queue-count {
+        font-size: 12px;
+        color: $text-low;
+    }
+
+    .queue-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
 
     .batch-info {
-        color: $text-secondary;
-        font-size: 14px;
-        font-weight: 500;
-        margin-left: auto;
-    }
-
-    .batch-toggle-btn {
-        min-width: 96px;
-        flex-shrink: 0;
-    }
-
-    .select-all-btn {
-        min-width: 90px;
-        flex-shrink: 0;
+        font-size: 12px;
+        color: $coral;
+        font-weight: 600;
+        padding: 0 4px;
     }
 }
 
 .collection-wrapper {
-    margin-bottom: 20px;
-    transition: transform 0.2s ease;
     position: relative;
+    margin-bottom: 14px;
+    animation: riseIn 0.32s ease both;
+    transition: transform 0.2s ease, opacity 0.2s ease;
 
-    &.batch-mode {
-        cursor: pointer;
-    }
+    &.ghost {
+        opacity: 0.45;
 
-    .batch-checkbox-area {
-        position: absolute;
-        left: 0;
-        top: 0;
-        height: 100%;
-        transform: translateX(-100%);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0 8px 0 16px;
-        visibility: hidden;
-
-        :deep(.el-checkbox__inner) {
-            width: 22px;
-            height: 22px;
-            &::after {
-                width: 6px;
-                height: 10px;
-            }
+        :deep(.collection-card) {
+            border-style: dashed;
+            border-color: $coral;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
         }
     }
 
-    &.batch-mode .batch-checkbox-area {
-        visibility: visible;
+    &.batch-mode {
+        cursor: pointer;
+
+        :deep(.drag-handle) {
+            display: none;
+        }
+
+        :deep(.collection-header) {
+            padding-left: 54px;
+        }
+    }
+
+    &.collection-selected {
+        :deep(.collection-card) {
+            border-color: $coral;
+            box-shadow:
+                0 0 0 1px rgba(255, 93, 115, 0.6),
+                0 16px 44px rgba(255, 93, 115, 0.16);
+        }
     }
 }
 
-.collection-wrapper.ghost {
-    opacity: 0.5;
-    background: #f0f0f0;
-    border: 2px dashed #999;
+.batch-checkbox-area {
+    position: absolute;
+    left: 14px;
+    top: 13px;
+    z-index: 6;
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    background: rgba(11, 14, 21, 0.9);
+    border: 1px solid $line-strong;
+    visibility: hidden;
+    opacity: 0;
+    transform: translateY(-4px) scale(0.92);
+    transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s;
 }
 
-.collection-wrapper.collection-selected :deep(.collection-card) {
-    border-color: #ee7959;
-    box-shadow: 0 0 10px 3px rgba(238, 121, 89, 0.4);
-}
-
-.collection-meta {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 16px;
-    background-color: #f9f9f9;
-    border: 1px solid $border-light;
-    border-top: none;
-    border-radius: 0 0 8px 8px;
-    font-size: 12px;
-    color: $text-meta;
-
-    &.meta-left {
-        text-align: left;
-        flex: 1;
-    }
-
-    &.meta-right {
-        text-align: right;
-        flex: 1;
-    }
-}
-
-.meta-left {
-    text-align: left;
-    flex: 1;
-}
-
-.meta-right {
-    text-align: right;
-    flex: 1;
+.collection-wrapper.batch-mode .batch-checkbox-area {
+    visibility: visible;
+    opacity: 1;
+    transform: translateY(0) scale(1);
 }
 
 .empty-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     text-align: center;
-    padding: 40px;
-    color: $text-secondary;
-    font-size: 16px;
+    padding: 72px 24px 96px;
+    border: 1px dashed $line-strong;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.014);
+
+    .empty-art {
+        width: 150px;
+        height: 96px;
+        color: $text-low;
+        margin-bottom: 22px;
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+    }
+
+    .empty-title {
+        font-size: 17px;
+        font-weight: 700;
+        color: $text-mid;
+        margin: 0 0 8px;
+    }
+
+    .empty-copy {
+        font-size: 13px;
+        color: $text-low;
+        margin: 0;
+    }
 }
 
 .context-menu {
     position: fixed;
     z-index: 9999;
-    background-color: #2c3e50;
-    border: 1px solid #34495e;
-    border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-    min-width: 140px;
-    max-width: 200px;
-    overflow: hidden;
-    backdrop-filter: blur(10px);
-    animation: slideIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    min-width: 196px;
+    padding: 6px;
+    background: rgba(24, 30, 43, 0.96);
+    border: 1px solid $line-strong;
+    border-radius: 12px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    animation: popIn 0.16s ease both;
 
     .context-menu-item {
-        padding: 10px 16px;
-        line-height: 1.4;
-        text-align: left;
-        user-select: none;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        color: $text-mid;
+        font-size: 13px;
+        font-weight: 600;
         cursor: pointer;
-        color: #ecf0f1;
-        font-size: 14px;
-        font-weight: 500;
-        transition: all 0.2s ease;
-        background: linear-gradient(
-            to right,
-            transparent 0%,
-            rgba(255, 255, 255, 0.05) 100%
-        );
+        user-select: none;
+        transition: background 0.15s ease, color 0.15s ease;
 
         &:hover {
-            background: linear-gradient(to right, #3498db, #2980b9);
+            background: rgba(255, 93, 115, 0.14);
             color: #ffffff;
         }
 
         &:not(:last-child) {
-            border-bottom: 1px solid #3d566e;
+            margin-bottom: 2px;
         }
     }
 }
 
-@keyframes slideIn {
+@keyframes riseIn {
     from {
         opacity: 0;
-        transform: scale(0.8) translateY(-10px);
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes popIn {
+    from {
+        opacity: 0;
+        transform: scale(0.96) translateY(-4px);
     }
     to {
         opacity: 1;
@@ -539,31 +833,59 @@ $expanded-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
 }
 
-/* 响应式设计 */
-@media (max-width: 768px) {
-    .input-group {
-        flex-direction: column;
+@media (max-width: 900px) {
+    .masthead-stats {
+        gap: 18px;
     }
 
-    .url-input {
+    .stat-progress {
+        display: none;
+    }
+}
+
+@media (max-width: 720px) {
+    .masthead-inner {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+        padding: 12px 16px;
+    }
+
+    .masthead-stats {
+        justify-content: space-between;
+        gap: 10px;
+    }
+
+    .stat {
+        align-items: flex-start;
+        min-width: 0;
+    }
+
+    .command-deck {
+        padding: 20px 16px 4px;
+    }
+
+    .command-bar {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 12px;
+        gap: 12px;
+    }
+
+    .create-btn {
         width: 100%;
     }
 
-    .collection-meta {
-        flex-direction: column;
-        gap: 4px;
-        text-align: center;
-
-        .meta-left,
-        .meta-right {
-            text-align: center;
-            width: 100%;
-        }
+    .queue-section {
+        padding: 18px 16px 40px;
     }
 
-    .meta-left,
-    .meta-right {
-        text-align: center;
+    .queue-toolbar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .queue-actions {
         width: 100%;
     }
 }

@@ -11,6 +11,7 @@ import {
     ElMessage,
     ElCheckbox,
     ElIcon,
+    ElTooltip,
 } from "element-plus";
 import "element-plus/dist/index.css";
 import "./style.scss";
@@ -30,5 +31,6 @@ app.use(ElCollapseItem);
 app.use(ElMessage);
 app.use(ElCheckbox);
 app.use(ElIcon);
+app.use(ElTooltip);
 
 app.mount("#app");
