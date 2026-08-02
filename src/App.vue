@@ -722,21 +722,39 @@ $amber: var(--bpm-amber);
 
 .batch-checkbox-area {
     position: absolute;
-    left: 14px;
-    top: 13px;
+    left: 12px;
+    top: 12px;
     z-index: 6;
-    display: grid;
-    place-items: center;
-    width: 26px;
-    height: 26px;
-    border-radius: 8px;
-    background: #ffffff;
-    border: 1px solid $line-strong;
-    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 28px;
+    padding: 0 4px;
     visibility: hidden;
     opacity: 0;
     transform: translateY(-4px) scale(0.92);
     transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s;
+
+    :deep(.el-checkbox) {
+        height: 28px;
+        display: flex;
+        align-items: center;
+    }
+
+    :deep(.el-checkbox__inner) {
+        width: 18px;
+        height: 18px;
+        border-radius: 5px;
+        border-width: 1.5px;
+    }
+
+    :deep(.el-checkbox.is-checked .el-checkbox__inner::after) {
+        left: 5px;
+        top: 3px;
+        width: 4px;
+        height: 8px;
+        border-width: 2px;
+    }
 }
 
 .collection-wrapper.batch-mode .batch-checkbox-area {
