@@ -260,6 +260,7 @@ import { useContextMenuStore } from "@/stores/contextMenu";
 import { useSelectedEpisodesStore } from "@/stores/selectedEpisodes";
 import { useSelectedCollectionsStore } from "@/stores/selectedCollections";
 import { useSeasonInfosStore } from "@/stores/seasonInfos";
+import { runWithFeedback } from "@/utils/feedback";
 
 const contextMenuStore = useContextMenuStore();
 const selectedEpisodesStore = useSelectedEpisodesStore();
@@ -324,18 +325,19 @@ const handleDragChange = async (evt: {
     try {
         const message = await updateCollectionOrder(updates);
         ElMessage.success(message);
-    } catch (error) {
-        ElMessage.error(`同步排序失败: ${(error as Error).message}`);
+    } catch {
         await seasonInfosStore.getAllSessonInfos();
     }
 };
 
 onMounted(async () => {
-    try {
-        seasonInfosStore.getAllSessonInfos();
-    } catch (error) {
-        ElMessage.error(`获取视频信息失败: ${(error as Error).message}`);
-    }
+    await runWithFeedback(
+        () => seasonInfosStore.getAllSessonInfos(),
+        {
+            error: "获取视频信息失败",
+            rethrow: false,
+        }
+    );
 
     document.addEventListener("click", handlePageClick, true);
     document.addEventListener("scroll", handlePageScroll, true);
@@ -353,10 +355,14 @@ const createProgress = async () => {
     isLoading.value = true;
 
     try {
-        await seasonInfosStore.addOneSeasonInfo(videoUrl.value);
-        ElMessage.success("视频信息获取成功");
-    } catch (error) {
-        ElMessage.error(`获取视频信息失败: ${(error as Error).message}`);
+        await runWithFeedback(
+            () => seasonInfosStore.addOneSeasonInfo(videoUrl.value),
+            {
+                success: "视频信息获取成功",
+                error: "获取视频信息失败",
+                rethrow: false,
+            }
+        );
     } finally {
         videoUrl.value = "";
         isLoading.value = false;
@@ -374,8 +380,7 @@ const batchRefresh = async () => {
         ElMessage.success(
             `批量刷新完成：成功 ${result.succeeded.length} 个，失败 ${result.failed.length} 个`
         );
-    } catch (error) {
-        ElMessage.error(`批量刷新失败: ${(error as Error).message}`);
+    } catch {
     } finally {
         batchUpdating.value = false;
         selectedCollectionsStore.clearSelection();

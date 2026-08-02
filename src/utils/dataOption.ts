@@ -1,7 +1,8 @@
 import { extractBVFromUrl } from "./bvParser";
 import { API } from "@/api";
 import { type SeasonInfo } from "@/types";
-import { ElMessageBox, ElMessage } from "element-plus";
+import { ElMessageBox } from "element-plus";
+import { runWithFeedback } from "./feedback";
 import { useSelectedEpisodesStore } from "@/stores/selectedEpisodes";
 import { useSeasonInfosStore } from "@/stores/seasonInfos";
 import { useContextMenuStore } from "@/stores/contextMenu";
@@ -52,54 +53,75 @@ export async function fetchAllSeasonInfo(): Promise<SeasonInfo[]> {
 }
 
 export async function changeWatchedCount(option: Number): Promise<void> {
-    try {
-        const selectedEpisodesStore = useSelectedEpisodesStore();
-        const seasonInfosStore = useSeasonInfosStore();
-        const contextMenuStore = useContextMenuStore();
+    const selectedEpisodesStore = useSelectedEpisodesStore();
+    const seasonInfosStore = useSeasonInfosStore();
+    const contextMenuStore = useContextMenuStore();
 
-        const apiUrl = new URL(API.VIDEO.PATCH, location.origin);
-        const response = await fetch(apiUrl.toString(), {
-            method: "PATCH",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                season_id: selectedEpisodesStore.currentSeasonId,
-                videos: selectedEpisodesStore.selectedEpisodes,
-                option,
-            }),
-        });
-        const responseData = await response.json();
-        const collection = responseData.data; // 一个SeasonInfo
-        // console.log(collection);
-        seasonInfosStore.updateSeasonInfo(collection);
-        contextMenuStore.hide();
-        selectedEpisodesStore.clearSelectedEpisodes();
-    } catch (error) {
-        throw error;
-    }
+    const successMessages: Record<number, string> = {
+        1: "观看次数 +1 成功",
+        2: "观看次数 -1 成功",
+        0: "已标记为部分观看",
+    };
+
+    await runWithFeedback(
+        async () => {
+            const apiUrl = new URL(API.VIDEO.PATCH, location.origin);
+            const response = await fetch(apiUrl.toString(), {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    season_id: selectedEpisodesStore.currentSeasonId,
+                    videos: selectedEpisodesStore.selectedEpisodes,
+                    option,
+                }),
+            });
+            const responseData = await response.json();
+            if (!response.ok) {
+                throw new Error(responseData.detail);
+            }
+            const collection = responseData.data;
+            seasonInfosStore.updateSeasonInfo(collection);
+            contextMenuStore.hide();
+            selectedEpisodesStore.clearSelectedEpisodes();
+        },
+        {
+            success: successMessages[Number(option)],
+            error: "更新观看次数失败",
+            rethrow: false,
+        }
+    );
 }
 
 export async function refreshCollection(season_id: number): Promise<void> {
-    try {
-        const seasonInfosStore = useSeasonInfosStore();
-        const apiUrl = new URL(API.COLLECTION.UPDATE, location.origin);
-        const response = await fetch(apiUrl.toString(), {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                season_id,
-            }),
-        });
+    const seasonInfosStore = useSeasonInfosStore();
 
-        const responseData = await response.json();
-        const collection = responseData.data; // 一个SeasonInfo
-        seasonInfosStore.updateSeasonInfo(collection);
-    } catch (error) {
-        throw error;
-    }
+    await runWithFeedback(
+        async () => {
+            const apiUrl = new URL(API.COLLECTION.UPDATE, location.origin);
+            const response = await fetch(apiUrl.toString(), {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    season_id,
+                }),
+            });
+            const responseData = await response.json();
+            if (!response.ok) {
+                throw new Error(responseData.detail);
+            }
+            const collection = responseData.data;
+            seasonInfosStore.updateSeasonInfo(collection);
+        },
+        {
+            success: "合集刷新成功",
+            error: "刷新合集失败",
+            rethrow: false,
+        }
+    );
 }
 
 export async function deleteCollection(season_id: number): Promise<void> {
@@ -113,21 +135,25 @@ export async function deleteCollection(season_id: number): Promise<void> {
                 confirmButtonText: "确定",
             }
         );
-        try {
-            const seasonInfosStore = useSeasonInfosStore();
-            const apiUrl = `${API.COLLECTION.DELETE}/${season_id}`;
-            const response = await fetch(apiUrl.toString(), {
-                method: "DELETE",
-            });
-            const responseData = await response.json();
-            // 添加成功失败判断
-            if (!response.ok) {
-                throw new Error(responseData.detail);
+        await runWithFeedback(
+            async () => {
+                const seasonInfosStore = useSeasonInfosStore();
+                const apiUrl = `${API.COLLECTION.DELETE}/${season_id}`;
+                const response = await fetch(apiUrl.toString(), {
+                    method: "DELETE",
+                });
+                const responseData = await response.json();
+                if (!response.ok) {
+                    throw new Error(responseData.detail);
+                }
+                seasonInfosStore.deleteSeasonInfo(season_id);
+            },
+            {
+                success: "删除成功",
+                error: "删除失败",
+                rethrow: false,
             }
-            seasonInfosStore.deleteSeasonInfo(season_id);
-        } catch (error) {
-            ElMessage.error(`删除失败: ${(error as Error).message}`);
-        }
+        );
     } catch (error) {}
 }
 
@@ -157,11 +183,45 @@ export async function batchDeleteCollections(
                 confirmButtonText: "确定",
             }
         );
-        try {
-            const seasonInfosStore = useSeasonInfosStore();
-            const apiUrl = new URL(API.COLLECTION.BATCH_DELETE, location.origin);
+        await runWithFeedback(
+            async () => {
+                const seasonInfosStore = useSeasonInfosStore();
+                const apiUrl = new URL(API.COLLECTION.BATCH_DELETE, location.origin);
+                const response = await fetch(apiUrl.toString(), {
+                    method: "DELETE",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ season_ids }),
+                });
+                const responseData = await response.json();
+                if (!response.ok) {
+                    throw new Error(responseData.detail);
+                }
+                season_ids.forEach((id) => {
+                    seasonInfosStore.deleteSeasonInfo(id);
+                });
+            },
+            {
+                success: "批量删除成功",
+                error: "删除失败",
+                rethrow: false,
+            }
+        );
+    } catch (error) {}
+}
+
+export async function batchUpdateCollections(
+    season_ids: number[]
+): Promise<BatchUpdateResult> {
+    const seasonInfosStore = useSeasonInfosStore();
+    let result: BatchUpdateResult | undefined;
+
+    await runWithFeedback(
+        async () => {
+            const apiUrl = new URL(API.COLLECTION.BATCH_UPDATE, location.origin);
             const response = await fetch(apiUrl.toString(), {
-                method: "DELETE",
+                method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
@@ -171,37 +231,18 @@ export async function batchDeleteCollections(
             if (!response.ok) {
                 throw new Error(responseData.detail);
             }
-            season_ids.forEach((id) => {
-                seasonInfosStore.deleteSeasonInfo(id);
+            const data = responseData.data as BatchUpdateResult;
+            result = data;
+            data.succeeded.forEach((item: { data: SeasonInfo }) => {
+                seasonInfosStore.updateSeasonInfo(item.data);
             });
-            ElMessage.success("批量删除成功");
-        } catch (error) {
-            ElMessage.error(`删除失败: ${(error as Error).message}`);
-        }
-    } catch (error) {}
-}
-
-export async function batchUpdateCollections(
-    season_ids: number[]
-): Promise<BatchUpdateResult> {
-    const seasonInfosStore = useSeasonInfosStore();
-    const apiUrl = new URL(API.COLLECTION.BATCH_UPDATE, location.origin);
-    const response = await fetch(apiUrl.toString(), {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
         },
-        body: JSON.stringify({ season_ids }),
-    });
-    const responseData = await response.json();
-    if (!response.ok) {
-        throw new Error(responseData.detail);
-    }
-    const result = responseData.data;
-    result.succeeded.forEach((item: { data: SeasonInfo }) => {
-        seasonInfosStore.updateSeasonInfo(item.data);
-    });
-    return result;
+        {
+            error: "批量刷新失败",
+        }
+    );
+
+    return result as BatchUpdateResult;
 }
 
 export interface OrderUpdate {
@@ -220,17 +261,28 @@ interface ApiResponse {
 export async function updateCollectionOrder(
     updates: OrderUpdate[]
 ): Promise<string> {
-    const apiUrl = new URL(API.COLLECTION.UPDATE_ORDER, location.origin);
-    const response = await fetch(apiUrl.toString(), {
-        method: "PATCH",
-        headers: {
-            "Content-Type": "application/json",
+    let message = "";
+
+    await runWithFeedback(
+        async () => {
+            const apiUrl = new URL(API.COLLECTION.UPDATE_ORDER, location.origin);
+            const response = await fetch(apiUrl.toString(), {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ updates }),
+            });
+            const responseData: ApiResponse = await response.json();
+            if (!response.ok) {
+                throw new Error(responseData.detail);
+            }
+            message = responseData.message;
         },
-        body: JSON.stringify({ updates }),
-    });
-    const responseData: ApiResponse = await response.json();
-    if (!response.ok) {
-        throw new Error(responseData.detail);
-    }
-    return responseData.message;
+        {
+            error: "同步排序失败",
+        }
+    );
+
+    return message;
 }
