@@ -215,10 +215,11 @@
 
         <div
             class="context-menu"
+            ref="contextMenuRef"
             v-show="contextMenuStore.showContextMenu"
             :style="{
-                left: contextMenuStore.x + 'px',
-                top: contextMenuStore.y + 'px',
+                left: menuX + 'px',
+                top: menuY + 'px',
             }"
         >
             <div class="context-menu-item" @click.stop="changeWatchedCount(1)">
@@ -238,7 +239,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import { Link, Minus, Plus, VideoPause, VideoPlay } from "@element-plus/icons-vue";
 import draggable from "vuedraggable";
@@ -256,6 +257,32 @@ import { useSeasonInfosStore } from "@/stores/seasonInfos";
 import { runWithFeedback } from "@/utils/feedback";
 
 const contextMenuStore = useContextMenuStore();
+const contextMenuRef = ref<HTMLElement | null>(null);
+const menuX = ref(0);
+const menuY = ref(0);
+
+// 菜单打开后按实际尺寸钳制位置，避免超出可视区域
+watch(
+    () => contextMenuStore.showContextMenu,
+    async (visible) => {
+        if (!visible) return;
+        await nextTick();
+        const el = contextMenuRef.value;
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        const margin = 8;
+        let x = contextMenuStore.x;
+        let y = contextMenuStore.y;
+        if (x + rect.width + margin > window.innerWidth) {
+            x = Math.max(margin, window.innerWidth - rect.width - margin);
+        }
+        if (y + rect.height + margin > window.innerHeight) {
+            y = Math.max(margin, window.innerHeight - rect.height - margin);
+        }
+        menuX.value = x;
+        menuY.value = y;
+    }
+);
 const selectedEpisodesStore = useSelectedEpisodesStore();
 const selectedCollectionsStore = useSelectedCollectionsStore();
 const seasonInfosStore = useSeasonInfosStore();
