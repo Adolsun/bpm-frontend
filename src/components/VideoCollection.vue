@@ -19,13 +19,6 @@
                     <h3 class="collection-title" :title="metadata.title">
                         {{ metadata.title }}
                     </h3>
-                    <div class="title-meta">
-                        <span class="chip">
-                            <el-icon :size="12"><VideoPlay /></el-icon>
-                            {{ metadata.total_episodes }} 集
-                        </span>
-                        <span class="chip chip-up">{{ metadata.up_name }}</span>
-                    </div>
                 </div>
             </div>
             <div class="header-buttons">
@@ -131,7 +124,6 @@ import {
     Refresh,
     Delete,
     Rank,
-    VideoPlay,
 } from "@element-plus/icons-vue";
 import { useSelectedEpisodesStore } from "@/stores/selectedEpisodes";
 import { useSelectedCollectionsStore } from "@/stores/selectedCollections";
@@ -380,35 +372,6 @@ $green: var(--bpm-green);
         overflow: hidden;
         text-overflow: ellipsis;
         line-height: 1.4;
-    }
-
-    .title-meta {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-top: 4px;
-        flex-wrap: wrap;
-    }
-
-    .chip {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        padding: 2px 7px;
-        border-radius: 6px;
-        font-size: 11px;
-        color: $text-mid;
-        background: rgba(15, 23, 42, 0.045);
-        border: 1px solid rgba(15, 23, 42, 0.08);
-        line-height: 1.5;
-
-        .el-icon {
-            color: $coral-deep;
-        }
-    }
-
-    .chip-up {
-        color: $text-low;
     }
 
     .header-buttons {
