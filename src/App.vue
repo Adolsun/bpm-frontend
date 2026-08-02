@@ -263,8 +263,12 @@ const menuY = ref(0);
 
 // 菜单打开后按实际尺寸钳制位置，避免超出可视区域
 watch(
-    () => contextMenuStore.showContextMenu,
-    async (visible) => {
+    [
+        () => contextMenuStore.showContextMenu,
+        () => contextMenuStore.x,
+        () => contextMenuStore.y,
+    ],
+    async ([visible]) => {
         if (!visible) return;
         await nextTick();
         const el = contextMenuRef.value;
