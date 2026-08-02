@@ -22,7 +22,6 @@
                 </div>
             </div>
             <div class="header-buttons">
-                <el-tooltip content="刷新合集" placement="top">
                     <el-button
                         class="refresh-btn"
                         text
@@ -30,8 +29,6 @@
                         aria-label="刷新合集"
                         @click.stop="refreshCollection(metadata.season_id)"
                     />
-                </el-tooltip>
-                <el-tooltip content="删除合集" placement="top">
                     <el-button
                         class="delete-btn"
                         text
@@ -39,7 +36,6 @@
                         aria-label="删除合集"
                         @click.stop="deleteCollection(metadata.season_id)"
                     />
-                </el-tooltip>
                 <el-button
                     class="expand-btn"
                     text
