@@ -7,7 +7,14 @@
     >
         <header class="collection-header">
             <div class="header-left">
-                <el-icon class="drag-handle" :size="18"><Rank /></el-icon>
+                <el-checkbox
+                    v-if="batchMode"
+                    class="drag-checkbox"
+                    :model-value="selectedCollectionsStore.isSelected(metadata.season_id)"
+                    @change="selectedCollectionsStore.toggleSelect(metadata.season_id)"
+                    @click.stop
+                />
+                <el-icon v-else class="drag-handle" :size="18"><Rank /></el-icon>
                 <div class="title-block">
                     <h3 class="collection-title" :title="metadata.title">
                         {{ metadata.title }}
@@ -127,16 +134,21 @@ import {
     VideoPlay,
 } from "@element-plus/icons-vue";
 import { useSelectedEpisodesStore } from "@/stores/selectedEpisodes";
+import { useSelectedCollectionsStore } from "@/stores/selectedCollections";
 import { useContextMenuStore } from "@/stores/contextMenu";
 import { refreshCollection, deleteCollection } from "@/utils/dataOption";
 
 interface Props {
     metadata: Omit<SeasonInfo, "order_index">;
+    batchMode?: boolean;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+    batchMode: false,
+});
 
 const selectedEpisodesStore = useSelectedEpisodesStore();
+const selectedCollectionsStore = useSelectedCollectionsStore();
 
 const isExpanded = ref(false);
 
@@ -326,6 +338,29 @@ $green: var(--bpm-green);
 
         &:hover {
             color: $coral-deep;
+        }
+    }
+
+    .drag-checkbox {
+        margin-right: 0;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        flex-shrink: 0;
+
+        :deep(.el-checkbox__inner) {
+            width: 18px;
+            height: 18px;
+            border-radius: 5px;
+            border-width: 1.5px;
+        }
+
+        :deep(.el-checkbox.is-checked .el-checkbox__inner::after) {
+            left: 5px;
+            top: 3px;
+            width: 4px;
+            height: 8px;
+            border-width: 2px;
         }
     }
 

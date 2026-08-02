@@ -88,7 +88,7 @@
                                 :disabled="selectedCount === 0"
                                 @click="batchRefresh"
                             >
-                                批量刷新
+                                批量更新
                             </el-button>
                             <el-button
                                 plain
@@ -123,17 +123,10 @@
                             }"
                             @click="handleCollectionRowClick(element.season_id)"
                         >
-                            <div class="batch-checkbox-area" @click.stop>
-                                <el-checkbox
-                                    :model-value="selectedCollectionsStore.isSelected(
-                                        element.season_id
-                                    )"
-                                    @change="selectedCollectionsStore.toggleSelect(
-                                        element.season_id
-                                    )"
-                                />
-                            </div>
-                            <VideoCollection :metadata="element" />
+                            <VideoCollection
+                                :metadata="element"
+                                :batch-mode="isBatchMode"
+                            />
                         </div>
                     </template>
                 </draggable>
@@ -378,7 +371,7 @@ const batchRefresh = async () => {
     try {
         const result = await batchUpdateCollections(ids);
         ElMessage.success(
-            `批量刷新完成：成功 ${result.succeeded.length} 个，失败 ${result.failed.length} 个`
+            `批量更新完成：成功 ${result.succeeded.length} 个，失败 ${result.failed.length} 个`
         );
     } catch {
     } finally {
@@ -700,14 +693,6 @@ $amber: var(--bpm-amber);
 
     &.batch-mode {
         cursor: pointer;
-
-        :deep(.drag-handle) {
-            display: none;
-        }
-
-        :deep(.collection-header) {
-            padding-left: 54px;
-        }
     }
 
     &.collection-selected {
@@ -720,48 +705,6 @@ $amber: var(--bpm-amber);
     }
 }
 
-.batch-checkbox-area {
-    position: absolute;
-    left: 12px;
-    top: 12px;
-    z-index: 6;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 28px;
-    padding: 0 4px;
-    visibility: hidden;
-    opacity: 0;
-    transform: translateY(-4px) scale(0.92);
-    transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s;
-
-    :deep(.el-checkbox) {
-        height: 28px;
-        display: flex;
-        align-items: center;
-    }
-
-    :deep(.el-checkbox__inner) {
-        width: 18px;
-        height: 18px;
-        border-radius: 5px;
-        border-width: 1.5px;
-    }
-
-    :deep(.el-checkbox.is-checked .el-checkbox__inner::after) {
-        left: 5px;
-        top: 3px;
-        width: 4px;
-        height: 8px;
-        border-width: 2px;
-    }
-}
-
-.collection-wrapper.batch-mode .batch-checkbox-area {
-    visibility: visible;
-    opacity: 1;
-    transform: translateY(0) scale(1);
-}
 
 .empty-placeholder {
     display: flex;

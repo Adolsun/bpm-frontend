@@ -253,7 +253,7 @@ export async function batchUpdateCollections(
             });
         },
         {
-            error: "批量刷新失败",
+            error: "批量更新失败",
         }
     );
 
