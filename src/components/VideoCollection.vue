@@ -238,7 +238,9 @@ const selectEpisode = (episode: Episode, event?: MouseEvent) => {
 };
 
 const handleCtrlSelect = (episode: Episode) => {
-    if (!selectedEpisodesStore.isSelected(episode)) {
+    if (selectedEpisodesStore.isSelected(episode)) {
+        selectedEpisodesStore.removeSelectedEpisode(episode);
+    } else {
         selectedEpisodesStore.addSelectedEpisode(episode);
     }
 };

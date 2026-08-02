@@ -26,6 +26,11 @@ export const useSelectedEpisodesStore = defineStore("selectedEpisodes", () => {
     const addSelectedEpisode = (episode: Episode) => {
         selectedEpisodes.value.push(episode);
     };
+    const removeSelectedEpisode = (episode: Episode) => {
+        selectedEpisodes.value = selectedEpisodes.value.filter(
+            (item) => item.bvid !== episode.bvid
+        );
+    };
     const singleSelect = (episode: Episode) => {
         selectedEpisodes.value = [episode];
     };
@@ -42,6 +47,7 @@ export const useSelectedEpisodesStore = defineStore("selectedEpisodes", () => {
         updateLastClickedEpisode,
         isSelected,
         addSelectedEpisode,
+        removeSelectedEpisode,
         singleSelect,
         multiSelect,
     };
