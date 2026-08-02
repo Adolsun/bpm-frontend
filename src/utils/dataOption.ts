@@ -57,11 +57,26 @@ export async function changeWatchedCount(option: Number): Promise<void> {
     const seasonInfosStore = useSeasonInfosStore();
     const contextMenuStore = useContextMenuStore();
 
+    const optionNumber = Number(option);
     const successMessages: Record<number, string> = {
         1: "观看次数 +1 成功",
         2: "观看次数 -1 成功",
         0: "已标记为部分观看",
     };
+    let successMessage = successMessages[optionNumber];
+
+    // 后端只对观看次数为 0 的视频执行部分观看标记，已看完的视频会被跳过
+    if (optionNumber === 0) {
+        const selectedVideos = selectedEpisodesStore.selectedEpisodes;
+        const skippedCount = selectedVideos.filter(
+            (video) => video.watched_count !== 0
+        ).length;
+        if (selectedVideos.length > 0 && skippedCount === selectedVideos.length) {
+            successMessage = "已看完的视频无需标记部分观看";
+        } else if (skippedCount > 0) {
+            successMessage = `已标记 ${selectedVideos.length - skippedCount} 个未看完视频，已看完的保持原状`;
+        }
+    }
 
     await runWithFeedback(
         async () => {
@@ -87,7 +102,7 @@ export async function changeWatchedCount(option: Number): Promise<void> {
             selectedEpisodesStore.clearSelectedEpisodes();
         },
         {
-            success: successMessages[Number(option)],
+            success: successMessage,
             error: "更新观看次数失败",
             rethrow: false,
         }
