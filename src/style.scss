@@ -16,6 +16,21 @@ $green: #239a6b;
 :root {
     color-scheme: light;
 
+    // BPM design tokens - change the theme here
+    --bpm-bg: #f4f6fa;
+    --bpm-panel: #ffffff;
+    --bpm-panel-2: #eef1f6;
+    --bpm-line: rgba(15, 23, 42, 0.1);
+    --bpm-line-strong: rgba(15, 23, 42, 0.16);
+    --bpm-text-hi: #161b26;
+    --bpm-text-mid: #3f4a5c;
+    --bpm-text-low: #5f6b7d;
+    --bpm-coral: #ff5d73;
+    --bpm-coral-deep: #d63a52;
+    --bpm-cyan: #0f8fbe;
+    --bpm-amber: #e39a2b;
+    --bpm-green: #239a6b;
+
     --el-color-primary: #ff5d73;
     --el-color-primary-light-3: #ff8b9c;
     --el-color-primary-light-5: #ffb2bf;

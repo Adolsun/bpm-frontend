@@ -271,16 +271,16 @@ const handleAuxClick = (episode: Episode, event: MouseEvent) => {
 </script>
 
 <style scoped lang="scss">
-$bg-panel: #ffffff;
-$line: rgba(15, 23, 42, 0.1);
-$line-strong: rgba(15, 23, 42, 0.16);
-$text-hi: #161b26;
-$text-mid: #3f4a5c;
-$text-low: #5f6b7d;
-$coral: #ff5d73;
-$coral-deep: #d63a52;
-$amber: #e39a2b;
-$green: #239a6b;
+$bg-panel: var(--bpm-panel);
+$line: var(--bpm-line);
+$line-strong: var(--bpm-line-strong);
+$text-hi: var(--bpm-text-hi);
+$text-mid: var(--bpm-text-mid);
+$text-low: var(--bpm-text-low);
+$coral: var(--bpm-coral);
+$coral-deep: var(--bpm-coral-deep);
+$amber: var(--bpm-amber);
+$green: var(--bpm-green);
 
 .collection-card {
     width: 100%;

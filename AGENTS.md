@@ -191,3 +191,9 @@ app.use(ElInput);
 - Element Plus components are globally registered in main.ts
 - The project uses Chinese language in some comments and UI text
 - API calls go through `/api` proxy to backend at `localhost:8001`
+
+## Editing Guidelines for UI Changes
+
+- Prefer targeted in-place hunks with `apply_patch`; do not replace an entire file when only part of it changes.
+- Theme colors are centralized as `--bpm-*` CSS custom properties in `src/style.scss`. Change the theme there, not inside component styles.
+- After a bulk rewrite, restart the Vite dev server if HMR looks stale; the file watcher can miss files replaced via delete + recreate.
