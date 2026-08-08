@@ -4,7 +4,7 @@
             <div class="masthead-inner">
                 <div class="brand">
                     <div class="brand-mark" aria-hidden="true">
-                        <el-icon :size="18"><VideoPlay /></el-icon>
+                        <img src="/bpm-mark.svg" alt="" class="brand-mark-img" />
                     </div>
                     <div class="brand-copy">
                         <strong class="brand-name">BPM</strong>
@@ -241,7 +241,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
-import { Link, Minus, Plus, VideoPause, VideoPlay } from "@element-plus/icons-vue";
+import { Link, Minus, Plus, VideoPause } from "@element-plus/icons-vue";
 import draggable from "vuedraggable";
 import {
     changeWatchedCount,
@@ -525,12 +525,14 @@ $amber: var(--bpm-amber);
         width: 36px;
         height: 36px;
         border-radius: 10px;
-        display: grid;
-        place-items: center;
-        color: #14090c;
-        background: linear-gradient(135deg, $coral, #ff8b6b);
-        box-shadow: 0 6px 18px rgba(255, 93, 115, 0.35);
+        overflow: hidden;
         flex-shrink: 0;
+    }
+
+    .brand-mark-img {
+        width: 100%;
+        height: 100%;
+        display: block;
     }
 
     .brand-copy {
