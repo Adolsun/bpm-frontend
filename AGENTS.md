@@ -51,7 +51,7 @@ npm install -D eslint @typescript-eslint/parser @typescript-eslint/eslint-plugin
 ### Imports
 - Use path alias `@/` for src-relative imports (e.g., `@/components/...`, `@/utils/...`)
 - External imports first, then internal imports
-- Vue components imported directly and registered manually in main.ts
+- Element Plus components are imported and registered in `main.ts`; business components are imported directly where used
 
 ```typescript
 import { ref, computed } from "vue";
@@ -147,13 +147,15 @@ src/
 │   └── VideoCollection.vue
 ├── stores/           # Pinia stores
 │   ├── contextMenu.ts
-│   ├── selectedEpisodes.ts
-│   └── seasonInfos.ts
+│   ├── seasonInfos.ts
+│   ├── selectedCollections.ts
+│   └── selectedEpisodes.ts
 ├── types/            # TypeScript interfaces
 │   └── index.ts
 ├── utils/            # Utility functions
 │   ├── bvParser.ts
 │   ├── dataOption.ts
+│   ├── feedback.ts
 │   └── timeUtils.ts
 ├── assets/           # Static assets
 ├── App.vue           # Root component
@@ -164,7 +166,7 @@ src/
 
 ## API Proxy
 
-The dev server proxies `/api/*` requests to `http://localhost:8001`. API paths are defined in `src/api/index.ts`.
+The dev server proxies `/api/*` to `http://127.0.0.1:8001` and strips the `/api` prefix (see `vite.config.ts`). API paths are defined in `src/api/index.ts`.
 
 ## Common Patterns
 
@@ -188,9 +190,8 @@ app.use(ElInput);
 
 - This project does not have a test framework - consider adding one if making significant changes
 - No ESLint/Prettier is configured - code style follows existing conventions
-- Element Plus components are globally registered in main.ts
+- Element Plus components are imported and registered per component in main.ts
 - The project uses Chinese language in some comments and UI text
-- API calls go through `/api` proxy to backend at `localhost:8001`
 
 ## Editing Guidelines for UI Changes
 
