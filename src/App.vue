@@ -332,35 +332,12 @@ const hiddenCount = computed(() =>
         : 0
 );
 
-// 拖拽列表：隐藏模式下把拖拽结果合并回全量数组。
-// 隐藏项锚定"前一个可见项"（或 HEAD），重建时只移动被拖的项，
-// 其余项（含隐藏项）之间的相对顺序保持不变。
+// 拖拽列表（显示层）：只读 getter，v-model 的 setter 不在此重建——
+// 重建需要"被拖的是哪一项"，这个信息只在 @change 的 evt.moved 里，
+// 统一由 handleDragChange 做"移除+插入"（只移动被拖项，其余项相对顺序不变）。
 const dragList = computed<SeasonInfo[]>({
     get: () => visibleSeasonInfos.value,
-    set: (newVisible) => {
-        if (!hideWatched.value) {
-            seasonInfosStore.reorderSeasonInfos(newVisible);
-            return;
-        }
-        const full = seasonInfosStore.seasonInfos;
-        const gaps = new Map<string, SeasonInfo[]>();
-        let anchor = "HEAD";
-        for (const item of full) {
-            if (isFullyWatched(item)) {
-                const bucket = gaps.get(anchor);
-                if (bucket) bucket.push(item);
-                else gaps.set(anchor, [item]);
-            } else {
-                anchor = String(item.season_id);
-            }
-        }
-        const result: SeasonInfo[] = [...(gaps.get("HEAD") ?? [])];
-        for (const item of newVisible) {
-            result.push(item);
-            result.push(...(gaps.get(String(item.season_id)) ?? []));
-        }
-        seasonInfosStore.reorderSeasonInfos(result);
-    },
+    set: () => {},
 });
 
 const seasonInfosNum = computed(() => seasonInfosStore.seasonInfosNum);
@@ -403,14 +380,34 @@ const handleCollectionRowClick = (seasonId: number) => {
 };
 
 const handleDragChange = async (evt: {
-    moved?: { oldIndex: number; newIndex: number };
+    moved?: { element: SeasonInfo; oldIndex: number; newIndex: number };
 }) => {
-    if (!evt.moved) return;
+    const moved = evt.moved;
+    if (!moved) return;
 
-    // dragList 的 setter 已把 seasonInfos 重建为拖后顺序
-    // （vuedraggable 先同步 emit update:modelValue，change 在下一 tick 才发）
-    const infos = seasonInfosStore.seasonInfos;
-    const updates = infos.map((item, idx) => ({
+    // 拖拽语义：只有被拖的项移动，其余项（含隐藏项）相对顺序完全不变。
+    // 方法：从全量数组移除被拖项，再插到"新位置前一个可见项"后面（或列表头）。
+    const oldVisible = visibleSeasonInfos.value; // 拖前可见顺序（store 尚未变更）
+    const newVisible = [...oldVisible];
+    newVisible.splice(moved.oldIndex, 1);
+    newVisible.splice(moved.newIndex, 0, moved.element);
+
+    const full = seasonInfosStore.seasonInfos;
+    const without = full.filter((i) => i.season_id !== moved.element.season_id);
+    const prevVisible =
+        moved.newIndex > 0 ? newVisible[moved.newIndex - 1] : null;
+    const to = prevVisible
+        ? without.findIndex((i) => i.season_id === prevVisible.season_id) + 1
+        : 0;
+
+    const reordered = [
+        ...without.slice(0, to),
+        moved.element,
+        ...without.slice(to),
+    ];
+    seasonInfosStore.reorderSeasonInfos(reordered);
+
+    const updates = reordered.map((item, idx) => ({
         season_id: item.season_id,
         order_index: idx,
     }));
