@@ -74,12 +74,12 @@
                     </div>
                     <div class="queue-actions">
                         <template v-if="!isBatchMode">
-                            <el-button class="batch-toggle-btn" @click="toggleBatchMode">
-                                批量操作
-                            </el-button>
                             <el-checkbox v-model="hideWatched" class="hide-watched-toggle">
                                 隐藏已看完{{ hiddenCount > 0 ? `（已隐藏 ${hiddenCount}）` : "" }}
                             </el-checkbox>
+                            <el-button class="batch-toggle-btn" @click="toggleBatchMode">
+                                批量操作
+                            </el-button>
                         </template>
                         <template v-else>
                             <span class="batch-info mono">已选 {{ selectedCount }} 个</span>
