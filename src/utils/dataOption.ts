@@ -45,8 +45,12 @@ export async function fetchAllSeasonInfo(): Promise<SeasonInfo[]> {
             method: "GET",
         });
         const responseData = await response.json();
+        if (!response.ok) {
+            throw new Error(responseData.detail);
+        }
         const collections = responseData.data;
-        return collections;
+        // 后端在无合集时返回 data: null，这里统一兜底为空数组，避免 .map 报错
+        return Array.isArray(collections) ? collections : [];
     } catch (error) {
         throw error;
     }
