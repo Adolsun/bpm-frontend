@@ -701,7 +701,7 @@ $amber: var(--bpm-amber);
 
     .batch-info {
         font-size: 12px;
-        color: $coral-deep;
+        color: $text-hi;
         font-weight: 600;
         padding: 0 4px;
     }
