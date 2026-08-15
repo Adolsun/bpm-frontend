@@ -40,8 +40,8 @@ $green: #239a6b;
     --el-color-primary-dark-2: #e04a5f;
     --el-color-success: #239a6b;
     --el-color-warning: #e39a2b;
-    --el-color-danger: #e0455c;
-    --el-color-error: #e0455c;
+    --el-color-danger: #c0273b;
+    --el-color-error: #c0273b;
     --el-color-info: #7b8798;
 
     --el-bg-color: #ffffff;
@@ -190,12 +190,12 @@ body {
 }
 
 .el-button--danger.is-plain {
-    --el-button-bg-color: rgba(255, 93, 115, 0.08);
-    --el-button-border-color: rgba(255, 93, 115, 0.4);
-    --el-button-text-color: #c83248;
-    --el-button-hover-bg-color: rgba(255, 93, 115, 0.14);
-    --el-button-hover-border-color: $coral;
-    --el-button-hover-text-color: #b32a40;
+    --el-button-bg-color: rgba(192, 39, 59, 0.08);
+    --el-button-border-color: rgba(192, 39, 59, 0.42);
+    --el-button-text-color: #b3243a;
+    --el-button-hover-bg-color: rgba(192, 39, 59, 0.14);
+    --el-button-hover-border-color: #c0273b;
+    --el-button-hover-text-color: #9c1d2f;
 }
 
 .el-button--primary.is-plain {

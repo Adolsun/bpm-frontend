@@ -83,7 +83,6 @@
                             </el-button>
                             <el-button
                                 plain
-                                type="primary"
                                 :loading="batchUpdating"
                                 :disabled="selectedCount === 0"
                                 @click="batchRefresh"
@@ -99,7 +98,7 @@
                             >
                                 批量删除
                             </el-button>
-                            <el-button class="batch-toggle-btn" text @click="toggleBatchMode">
+                            <el-button class="batch-toggle-btn" @click="toggleBatchMode">
                                 退出
                             </el-button>
                         </template>
