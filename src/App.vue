@@ -64,13 +64,22 @@
                 <div v-show="seasonInfosNum > 0" class="batch-toolbar queue-toolbar">
                     <div class="queue-heading">
                         <span class="queue-title">合集队列</span>
-                        <span class="queue-count mono">{{ seasonInfosNum }} 个合集</span>
+                        <span class="queue-count mono">
+                            {{
+                                hideWatched
+                                    ? `${visibleSeasonInfos.length} / ${seasonInfosNum}`
+                                    : seasonInfosNum
+                            }} 个合集
+                        </span>
                     </div>
                     <div class="queue-actions">
                         <template v-if="!isBatchMode">
                             <el-button class="batch-toggle-btn" @click="toggleBatchMode">
                                 批量操作
                             </el-button>
+                            <el-checkbox v-model="hideWatched" class="hide-watched-toggle">
+                                隐藏已看完{{ hiddenCount > 0 ? `（已隐藏 ${hiddenCount}）` : "" }}
+                            </el-checkbox>
                         </template>
                         <template v-else>
                             <span class="batch-info mono">已选 {{ selectedCount }} 个</span>
@@ -106,7 +115,7 @@
                 </div>
 
                 <draggable
-                    v-model="seasonInfosStore.seasonInfos"
+                    v-model="dragList"
                     item-key="season_id"
                     ghost-class="ghost"
                     @change="handleDragChange"
@@ -209,6 +218,18 @@
                     <p class="empty-title">队列还是空的</p>
                     <p class="empty-copy">粘贴一个 B 站视频链接，创建第一个进度合集</p>
                 </div>
+
+                <div
+                    v-else-if="hideWatched && visibleSeasonInfos.length === 0"
+                    class="empty-placeholder"
+                >
+                    <p class="empty-title">没有未看完的合集</p>
+                    <p class="empty-copy">
+                        <el-button text @click="hideWatched = false">
+                            查看已看完的合集
+                        </el-button>
+                    </p>
+                </div>
             </section>
         </main>
 
@@ -254,6 +275,7 @@ import { useSelectedEpisodesStore } from "@/stores/selectedEpisodes";
 import { useSelectedCollectionsStore } from "@/stores/selectedCollections";
 import { useSeasonInfosStore } from "@/stores/seasonInfos";
 import { runWithFeedback } from "@/utils/feedback";
+import type { SeasonInfo } from "@/types";
 
 const contextMenuStore = useContextMenuStore();
 const contextMenuRef = ref<HTMLElement | null>(null);
@@ -289,6 +311,57 @@ watch(
 const selectedEpisodesStore = useSelectedEpisodesStore();
 const selectedCollectionsStore = useSelectedCollectionsStore();
 const seasonInfosStore = useSeasonInfosStore();
+
+// ---- 隐藏已看完合集（纯显示过滤，不影响后端 order_index）----
+const hideWatched = ref(localStorage.getItem("bpm.hideWatched") === "1");
+watch(hideWatched, (v) => localStorage.setItem("bpm.hideWatched", v ? "1" : "0"));
+
+const isFullyWatched = (info: SeasonInfo): boolean =>
+    info.videos.length > 0 &&
+    info.videos.every((video) => video.status === "watched");
+
+const visibleSeasonInfos = computed<SeasonInfo[]>(() =>
+    hideWatched.value
+        ? seasonInfosStore.seasonInfos.filter((s) => !isFullyWatched(s))
+        : seasonInfosStore.seasonInfos
+);
+
+const hiddenCount = computed(() =>
+    hideWatched.value
+        ? seasonInfosStore.seasonInfos.length - visibleSeasonInfos.value.length
+        : 0
+);
+
+// 拖拽列表：隐藏模式下把拖拽结果合并回全量数组。
+// 隐藏项锚定"前一个可见项"（或 HEAD），重建时只移动被拖的项，
+// 其余项（含隐藏项）之间的相对顺序保持不变。
+const dragList = computed<SeasonInfo[]>({
+    get: () => visibleSeasonInfos.value,
+    set: (newVisible) => {
+        if (!hideWatched.value) {
+            seasonInfosStore.reorderSeasonInfos(newVisible);
+            return;
+        }
+        const full = seasonInfosStore.seasonInfos;
+        const gaps = new Map<string, SeasonInfo[]>();
+        let anchor = "HEAD";
+        for (const item of full) {
+            if (isFullyWatched(item)) {
+                const bucket = gaps.get(anchor);
+                if (bucket) bucket.push(item);
+                else gaps.set(anchor, [item]);
+            } else {
+                anchor = String(item.season_id);
+            }
+        }
+        const result: SeasonInfo[] = [...(gaps.get("HEAD") ?? [])];
+        for (const item of newVisible) {
+            result.push(item);
+            result.push(...(gaps.get(String(item.season_id)) ?? []));
+        }
+        seasonInfosStore.reorderSeasonInfos(result);
+    },
+});
 
 const seasonInfosNum = computed(() => seasonInfosStore.seasonInfosNum);
 const selectedCount = computed(() => selectedCollectionsStore.selectedCount);
@@ -334,15 +407,12 @@ const handleDragChange = async (evt: {
 }) => {
     if (!evt.moved) return;
 
-    const { oldIndex, newIndex } = evt.moved;
+    // dragList 的 setter 已把 seasonInfos 重建为拖后顺序
+    // （vuedraggable 先同步 emit update:modelValue，change 在下一 tick 才发）
     const infos = seasonInfosStore.seasonInfos;
-
-    const minIndex = Math.min(oldIndex, newIndex);
-    const maxIndex = Math.max(oldIndex, newIndex);
-
-    const updates = infos.slice(minIndex, maxIndex + 1).map((item, idx) => ({
+    const updates = infos.map((item, idx) => ({
         season_id: item.season_id,
-        order_index: minIndex + idx,
+        order_index: idx,
     }));
 
     try {
@@ -704,6 +774,17 @@ $amber: var(--bpm-amber);
         color: $text-hi;
         font-weight: 600;
         padding: 0 4px;
+    }
+
+    .hide-watched-toggle {
+        height: 32px;
+        margin-right: 4px;
+        font-weight: 600;
+
+        :deep(.el-checkbox__label) {
+            font-size: 12px;
+            color: $text-mid;
+        }
     }
 }
 
